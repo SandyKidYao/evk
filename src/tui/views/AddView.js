@@ -29,7 +29,6 @@ export default function AddView({ onBack, onCancel, showMessage }) {
   };
 
   const handleValueSubmit = () => {
-    if (!value.trim()) return;
     setStep(STEPS.TAGS);
   };
 
@@ -62,7 +61,7 @@ export default function AddView({ onBack, onCancel, showMessage }) {
       h(Text, { color: step === STEPS.VALUE ? 'cyan' : 'gray' }, 'Value: '),
       step === STEPS.VALUE
         ? h(TextInput, { value, onChange: setValue, onSubmit: handleValueSubmit })
-        : h(Text, null, value.length > 40 ? value.slice(0, 37) + '...' : value)
+        : h(Text, { color: value ? undefined : 'gray' }, value ? (value.length > 40 ? value.slice(0, 37) + '...' : value) : '(empty)')
     ),
 
     // Tags

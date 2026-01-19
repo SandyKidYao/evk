@@ -45,10 +45,6 @@ export default function DetailView({ varKey, onBack, showMessage }) {
   };
 
   const handleEditSubmit = () => {
-    if (!editValue.trim()) {
-      showMessage('Value cannot be empty', 'error');
-      return;
-    }
     try {
       addVariable(varKey, editValue, {
         description: data.description,
@@ -122,7 +118,7 @@ export default function DetailView({ varKey, onBack, showMessage }) {
     h(Box, { flexDirection: 'column', borderStyle: 'single', borderColor: 'gray', paddingX: 1, marginBottom: 1 },
       h(Box, null,
         h(Text, { color: 'gray', bold: true }, 'Value:'.padEnd(12)),
-        h(Text, null, data.value)
+        h(Text, { color: data.value ? undefined : 'gray' }, data.value || '(empty)')
       ),
       data.description && h(Box, null,
         h(Text, { color: 'gray', bold: true }, 'Description:'.padEnd(12)),
