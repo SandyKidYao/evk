@@ -1,6 +1,6 @@
 # evk
 
-A local-first environment variable manager for developers.
+A local-first environment variable keeper for developers.
 
 ## Features
 

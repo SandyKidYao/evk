@@ -16,7 +16,7 @@ const program = new Command();
 
 program
   .name('evk')
-  .description('A local-first environment variable manager for developers')
+  .description('A local-first environment variable keeper for developers')
   .version('0.1.0')
   .action(() => {
     // Default action: start interactive TUI

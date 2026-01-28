@@ -49,7 +49,7 @@ export default function App() {
     // Header
     h(Box, { marginBottom: 1 },
       h(Text, { bold: true, color: 'cyan' }, 'evk'),
-      h(Text, { color: 'gray' }, ' - Environment Variable Manager')
+      h(Text, { color: 'gray' }, ' - Environment Variable Keeper')
     ),
 
     // Message

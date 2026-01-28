@@ -20,7 +20,7 @@ node bin/evk.js
 
 ## Architecture
 
-**evk** is a local-first environment variable manager CLI built with Node.js (ESM modules). Variables are stored in `~/.evk/store.yaml`.
+**evk** is a local-first environment variable keeper CLI built with Node.js (ESM modules). Variables are stored in `~/.evk/store.yaml`.
 
 ### Project Structure
 
