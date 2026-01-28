@@ -48,12 +48,15 @@ evk remove API_KEY
 # Sync to files
 evk sync -z                 # Sync all variables to ~/.zshrc
 evk sync -b                 # Sync to ~/.bashrc
+evk sync --fish             # Sync to ~/.config/fish/config.fish
 evk sync -e                 # Sync to ./.env
 evk sync API_KEY DB_URL -z  # Sync specific keys to ~/.zshrc
 evk sync --file ~/custom    # Sync to custom file path
 
 # Clean managed blocks from files
 evk clean -z                # Clean ~/.zshrc
+evk clean -b                # Clean ~/.bashrc
+evk clean --fish            # Clean fish config
 evk clean -e                # Clean .env file
 evk clean --file ~/custom   # Clean specific file
 evk clean --all             # Clean all known targets
