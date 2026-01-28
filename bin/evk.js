@@ -9,6 +9,7 @@ import { cleanCommand } from '../src/commands/clean.js';
 import { exportCommand } from '../src/commands/export.js';
 import { showCommand, getCommand } from '../src/commands/show.js';
 import { purgeCommand } from '../src/commands/purge.js';
+import { tagsCommand } from '../src/commands/tags.js';
 import { startTUI } from '../src/tui/index.js';
 
 const program = new Command();
@@ -41,9 +42,10 @@ program
 
 // remove command
 program
-  .command('remove <key>')
+  .command('remove [key]')
   .alias('rm')
   .description('Remove an environment variable')
+  .option('-t, --tags <tags>', 'Remove all variables with tags (comma-separated)')
   .action(removeCommand);
 
 // sync command
@@ -55,6 +57,7 @@ program
   .option('--fish', 'Sync to ~/.config/fish/config.fish')
   .option('-e, --env [path]', 'Sync to .env file (default: ./.env)')
   .option('--file <path>', 'Sync to custom file path')
+  .option('-t, --tags <tags>', 'Sync variables with tags (comma-separated)')
   .action(syncCommand);
 
 // clean command
@@ -87,6 +90,13 @@ program
   .command('get <key>')
   .description('Get the value of a variable (for scripting)')
   .action(getCommand);
+
+// tags command
+program
+  .command('tags')
+  .description('List all available tags')
+  .option('-f, --format <format>', 'Output format (list|json)', 'list')
+  .action(tagsCommand);
 
 // ui command (explicit)
 program

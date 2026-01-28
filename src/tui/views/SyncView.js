@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import Spinner from 'ink-spinner';
 import path from 'path';
 import os from 'os';
-import { getAllVariables } from '../../core/store.js';
+import { getAllVariables, getAllTags } from '../../core/store.js';
 import { syncToFile } from '../../core/sync.js';
 import { expandPath } from '../../utils/file.js';
 
@@ -21,14 +21,30 @@ const TARGETS = [
 export default function SyncView({ onBack, showMessage }) {
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState(null);
-  const [mode, setMode] = useState('select'); // select, custom
+  const [mode, setMode] = useState('filter'); // filter, selectTag, select, custom
   const [customPath, setCustomPath] = useState('');
+  const [selectedTag, setSelectedTag] = useState(null);
+  const [allTags, setAllTags] = useState([]);
+
+  useEffect(() => {
+    try {
+      const tags = getAllTags();
+      setAllTags(tags);
+    } catch (err) {
+      // ignore
+    }
+  }, []);
 
   useInput((input, key) => {
     if (key.escape) {
       if (mode === 'custom') {
         setMode('select');
         setCustomPath('');
+      } else if (mode === 'select') {
+        setMode('filter');
+        setSelectedTag(null);
+      } else if (mode === 'selectTag') {
+        setMode('filter');
       } else {
         onBack();
       }
@@ -40,9 +56,10 @@ export default function SyncView({ onBack, showMessage }) {
     setResult(null);
 
     try {
-      const vars = getAllVariables();
+      const options = selectedTag ? { tags: [selectedTag] } : {};
+      const vars = getAllVariables(options);
       if (Object.keys(vars).length === 0) {
-        showMessage('No variables to sync', 'warning');
+        showMessage(selectedTag ? `No variables with tag: ${selectedTag}` : 'No variables to sync', 'warning');
         setSyncing(false);
         return;
       }
@@ -57,6 +74,20 @@ export default function SyncView({ onBack, showMessage }) {
       showMessage(err.message, 'error');
     }
     setSyncing(false);
+    setMode('select');
+  };
+
+  const handleFilterSelect = (item) => {
+    if (item.value === 'all') {
+      setSelectedTag(null);
+      setMode('select');
+    } else if (item.value === 'byTag') {
+      setMode('selectTag');
+    }
+  };
+
+  const handleTagSelect = (item) => {
+    setSelectedTag(item.value);
     setMode('select');
   };
 
@@ -89,10 +120,42 @@ export default function SyncView({ onBack, showMessage }) {
     );
   }
 
+  // Filter selection mode
+  if (mode === 'filter') {
+    const filterItems = [
+      { label: 'All variables', value: 'all' }
+    ];
+    if (allTags.length > 0) {
+      filterItems.push({ label: 'Filter by tag...', value: 'byTag' });
+    }
+
+    return h(Box, { flexDirection: 'column' },
+      h(Box, { marginBottom: 1 }, h(Text, { bold: true }, 'Sync Variables')),
+      h(Box, { marginBottom: 1 }, h(Text, { color: 'gray' }, 'Select which variables to sync:')),
+      h(SelectInput, { items: filterItems, onSelect: handleFilterSelect }),
+      h(Box, { marginTop: 1 }, h(Text, { color: 'gray' }, 'Esc to go back'))
+    );
+  }
+
+  // Tag selection mode
+  if (mode === 'selectTag') {
+    const tagItems = allTags.map(tag => ({ label: tag, value: tag }));
+
+    return h(Box, { flexDirection: 'column' },
+      h(Box, { marginBottom: 1 }, h(Text, { bold: true }, 'Select Tag')),
+      h(Box, { marginBottom: 1 }, h(Text, { color: 'gray' }, 'Choose a tag to filter variables:')),
+      h(SelectInput, { items: tagItems, onSelect: handleTagSelect }),
+      h(Box, { marginTop: 1 }, h(Text, { color: 'gray' }, 'Esc to go back'))
+    );
+  }
+
   // Custom path input mode
   if (mode === 'custom') {
     return h(Box, { flexDirection: 'column' },
-      h(Box, { marginBottom: 1 }, h(Text, { bold: true }, 'Sync to Custom Path')),
+      h(Box, { marginBottom: 1 },
+        h(Text, { bold: true }, 'Sync to Custom Path'),
+        selectedTag && h(Text, { color: 'blue' }, ` [${selectedTag}]`)
+      ),
       h(Box, { marginBottom: 1 },
         h(Text, { color: 'gray' }, 'Enter file path: '),
         h(TextInput, {
@@ -108,9 +171,12 @@ export default function SyncView({ onBack, showMessage }) {
     );
   }
 
-  // Select mode
+  // Select target mode
   return h(Box, { flexDirection: 'column' },
-    h(Box, { marginBottom: 1 }, h(Text, { bold: true }, 'Sync to Target')),
+    h(Box, { marginBottom: 1 },
+      h(Text, { bold: true }, 'Sync to Target'),
+      selectedTag && h(Text, { color: 'blue' }, ` [${selectedTag}]`)
+    ),
     h(Box, { marginBottom: 1 }, h(Text, { color: 'gray' }, 'Select target file:')),
     h(SelectInput, { items: TARGETS, onSelect: handleSelect }),
 

@@ -156,6 +156,25 @@ export function getAllVariables(options = {}) {
 }
 
 /**
+ * Get all unique tags from all variables
+ * @returns {string[]} Sorted array of unique tags
+ */
+export function getAllTags() {
+  const store = readStore();
+  const tagSet = new Set();
+
+  for (const data of Object.values(store.vars)) {
+    if (data.tags && Array.isArray(data.tags)) {
+      for (const tag of data.tags) {
+        tagSet.add(tag);
+      }
+    }
+  }
+
+  return Array.from(tagSet).sort();
+}
+
+/**
  * Get variables by keys
  * @param {string[]} keys - Array of variable keys
  * @returns {object} Variables matching the keys

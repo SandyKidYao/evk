@@ -34,6 +34,7 @@ const {
   removeVariable,
   getVariable,
   getAllVariables,
+  getAllTags,
   getVariablesByKeys,
   purgeStore
 } = await import('../src/core/store.js');
@@ -261,6 +262,47 @@ describe('Store Module', () => {
       const result = getAllVariables({ tags: ['prod'] });
 
       expect(Object.keys(result)).toEqual(['KEY2', 'KEY3']);
+    });
+  });
+
+  describe('getAllTags', () => {
+    test('should return all unique tags sorted', () => {
+      const mockVars = {
+        KEY1: { value: 'v1', tags: ['dev', 'api'] },
+        KEY2: { value: 'v2', tags: ['prod'] },
+        KEY3: { value: 'v3', tags: ['prod', 'api'] }
+      };
+      const mockStore = { version: 1, vars: mockVars };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = getAllTags();
+
+      expect(result).toEqual(['api', 'dev', 'prod']);
+    });
+
+    test('should return empty array when no tags exist', () => {
+      const mockVars = {
+        KEY1: { value: 'v1', tags: [] },
+        KEY2: { value: 'v2' }
+      };
+      const mockStore = { version: 1, vars: mockVars };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = getAllTags();
+
+      expect(result).toEqual([]);
+    });
+
+    test('should return empty array when no variables exist', () => {
+      const mockStore = { version: 1, vars: {} };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = getAllTags();
+
+      expect(result).toEqual([]);
     });
   });
 

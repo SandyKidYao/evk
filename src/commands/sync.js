@@ -40,10 +40,18 @@ export function syncCommand(keys, options) {
 
     // Get variables to sync
     let vars;
+    const filterTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
+
     if (keys && keys.length > 0) {
       vars = getVariablesByKeys(keys);
       if (Object.keys(vars).length === 0) {
         logger.warn('None of the specified keys were found.');
+        return;
+      }
+    } else if (filterTags.length > 0) {
+      vars = getAllVariables({ tags: filterTags });
+      if (Object.keys(vars).length === 0) {
+        logger.warn(`No variables found with tags: ${filterTags.join(', ')}`);
         return;
       }
     } else {
