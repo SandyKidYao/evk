@@ -57,7 +57,7 @@ evk/
 - **src/commands/** - Individual command implementations, each exporting a handler function
 - **src/core/store.js** - YAML store operations (`~/.evk/store.yaml`). Handles reading/writing with 0600 permissions for security
 - **src/core/sync.js** - Syncs variables to target files (shell configs, .env). Manages "evk Managed Block" markers and handles conflict detection by commenting out existing variables
-- **src/utils/parser.js** - Block parsing/generation. Defines `BLOCK_START`/`BLOCK_END` markers, detects file types (shell/fish vs dotenv), formats export statements
+- **src/utils/parser.js** - Block parsing/generation. Defines `BLOCK_START`/`BLOCK_END` markers, detects file types (shell vs dotenv), formats export statements
 - **src/utils/file.js** - Safe file I/O with `~` expansion
 - **src/utils/logger.js** - Console output helpers with chalk (success, error, warn, info, dim)
 
@@ -104,7 +104,7 @@ Key design decisions:
 ### Key Patterns
 
 - **Managed Block** - When syncing, evk creates/updates a marked block in target files. Variables outside this block that conflict are commented with `# [evk] Commented out due to conflict:`
-- **Three file types** - `shell` (uses `export KEY="value"`), `fish` (uses `set -gx KEY "value"`), and `dotenv` (uses `KEY=value`). Auto-detected from path
+- **Two file types** - `shell` (uses `export KEY="value"`) and `dotenv` (uses `KEY=value`). Auto-detected from path
 - **Tests use ESM mocking** - Tests use `jest.unstable_mockModule` for mocking ES modules, with dynamic imports after mock setup
 
 ## Commit Checklist

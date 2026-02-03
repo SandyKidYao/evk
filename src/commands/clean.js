@@ -7,8 +7,7 @@ import * as logger from '../utils/logger.js';
 // Predefined target paths
 const TARGETS = {
   zsh: path.join(os.homedir(), '.zshrc'),
-  bash: path.join(os.homedir(), '.bashrc'),
-  fish: path.join(os.homedir(), '.config', 'fish', 'config.fish')
+  bash: path.join(os.homedir(), '.bashrc')
 };
 
 export function cleanCommand(options) {
@@ -28,9 +27,6 @@ export function cleanCommand(options) {
       }
       if (options.bash || options.b) {
         targets.push(TARGETS.bash);
-      }
-      if (options.fish) {
-        targets.push(TARGETS.fish);
       }
       if (options.env || options.e) {
         const envPath = typeof options.env === 'string' ? options.env : '.env';

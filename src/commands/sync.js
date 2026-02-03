@@ -8,8 +8,7 @@ import * as logger from '../utils/logger.js';
 // Predefined target paths
 const TARGETS = {
   zsh: path.join(os.homedir(), '.zshrc'),
-  bash: path.join(os.homedir(), '.bashrc'),
-  fish: path.join(os.homedir(), '.config', 'fish', 'config.fish')
+  bash: path.join(os.homedir(), '.bashrc')
 };
 
 export function syncCommand(keys, options) {
@@ -25,8 +24,6 @@ export function syncCommand(keys, options) {
       targetPath = TARGETS.zsh;
     } else if (options.bash || options.b) {
       targetPath = TARGETS.bash;
-    } else if (options.fish) {
-      targetPath = TARGETS.fish;
     } else if (options.env || options.e) {
       // .env file - default to current directory or specified path
       const envPath = typeof options.env === 'string' ? options.env : '.env';
