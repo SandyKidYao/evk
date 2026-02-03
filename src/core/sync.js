@@ -105,8 +105,11 @@ export function syncToFile(targetPath, vars) {
     // Parse old variables from existing block
     oldVars = parseVarsFromBlock(block.content, type);
 
-    // Generate new block
-    const newBlock = generateBlock(vars, oldVars, type);
+    // Merge: keep old vars and update/add new vars (append mode)
+    const mergedVars = { ...oldVars, ...vars };
+
+    // Generate new block with merged vars (no deprecated vars)
+    const newBlock = generateBlock(mergedVars, {}, type);
 
     // Replace old block with new
     newContent = content.slice(0, block.start) + newBlock + content.slice(block.end);
@@ -127,14 +130,13 @@ export function syncToFile(targetPath, vars) {
   // Calculate stats
   const added = Object.keys(vars).filter(k => !oldVars[k]).length;
   const updated = Object.keys(vars).filter(k => oldVars[k]).length;
-  const deprecated = Object.keys(oldVars).filter(k => !vars[k]).length;
 
   return {
     path: expanded,
     type,
     added,
     updated,
-    deprecated,
+    deprecated: 0, // No longer deprecating in append mode
     commented,
     total: Object.keys(vars).length
   };

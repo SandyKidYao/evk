@@ -1,17 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { addVariable } from '../../core/store.js';
+import { colors, icons } from '../theme.js';
 
 const { createElement: h } = React;
 
 const STEPS = { KEY: 0, VALUE: 1, TAGS: 2, CONFIRM: 3 };
+const STEP_LABELS = ['Key', 'Value', 'Tags', 'Confirm'];
 
-export default function AddView({ onBack, onCancel, showMessage }) {
+// Step indicator component
+function StepIndicator({ currentStep, totalSteps }) {
+  const steps = [];
+  for (let i = 0; i < totalSteps; i++) {
+    const isActive = i === currentStep;
+    const isCompleted = i < currentStep;
+
+    if (i > 0) {
+      steps.push(
+        h(Text, {
+          key: `line-${i}`,
+          color: isCompleted ? colors.success : colors.textMuted
+        }, '━━')
+      );
+    }
+
+    steps.push(
+      h(Text, {
+        key: `step-${i}`,
+        color: isActive ? colors.accent : isCompleted ? colors.success : colors.textMuted,
+        bold: isActive
+      }, isCompleted ? icons.check : isActive ? icons.check : icons.uncheck)
+    );
+  }
+
+  return h(Box, { marginBottom: 1 },
+    h(Text, { color: colors.textDim }, '['),
+    ...steps,
+    h(Text, { color: colors.textDim }, ']  '),
+    h(Text, { color: colors.primary, bold: true }, `Step ${currentStep + 1}/${totalSteps}: `),
+    h(Text, { color: colors.text }, STEP_LABELS[currentStep])
+  );
+}
+
+export default function AddView({ onBack, onCancel, showMessage, setFooterHints }) {
   const [step, setStep] = useState(STEPS.KEY);
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
   const [tags, setTags] = useState('');
+
+  // Update footer hints - AddView has no special shortcuts
+  useEffect(() => {
+    setFooterHints([]);
+  }, [setFooterHints]);
 
   useInput((input, keyObj) => {
     if (keyObj.escape) {
@@ -45,41 +86,91 @@ export default function AddView({ onBack, onCancel, showMessage }) {
     }
   };
 
-  return h(Box, { flexDirection: 'column' },
-    h(Box, { marginBottom: 1 }, h(Text, { bold: true }, 'Add Variable')),
-
-    // Key
+  // Input field component
+  const InputField = ({ label, fieldValue, isActive, onChange, onSubmit, placeholder }) =>
     h(Box, { marginBottom: 1 },
-      h(Text, { color: step === STEPS.KEY ? 'cyan' : 'gray' }, 'Key: '),
-      step === STEPS.KEY
-        ? h(TextInput, { value: key, onChange: setKey, onSubmit: handleKeySubmit })
-        : h(Text, null, key)
+      h(Box, { width: 16 },
+        h(Text, { color: isActive ? colors.accent : colors.textDim, bold: isActive },
+          `${isActive ? icons.arrow : ' '} ${label}: `
+        )
+      ),
+      isActive
+        ? h(Box, {
+            borderStyle: 'round',
+            borderColor: colors.accent,
+            paddingX: 1,
+            minWidth: 30
+          },
+            h(TextInput, {
+              value: fieldValue,
+              onChange,
+              onSubmit,
+              placeholder
+            })
+          )
+        : h(Text, { color: fieldValue ? colors.text : colors.textMuted },
+            fieldValue || '(empty)'
+          )
+    );
+
+  return h(Box, { flexDirection: 'column' },
+    // Title
+    h(Box, { marginBottom: 1 },
+      h(Text, { bold: true, color: colors.primary }, `${icons.add} Add Variable`)
     ),
 
-    // Value
-    step >= STEPS.VALUE && h(Box, { marginBottom: 1 },
-      h(Text, { color: step === STEPS.VALUE ? 'cyan' : 'gray' }, 'Value: '),
-      step === STEPS.VALUE
-        ? h(TextInput, { value, onChange: setValue, onSubmit: handleValueSubmit })
-        : h(Text, { color: value ? undefined : 'gray' }, value ? (value.length > 40 ? value.slice(0, 37) + '...' : value) : '(empty)')
-    ),
+    // Step indicator
+    h(StepIndicator, { currentStep: step, totalSteps: 4 }),
 
-    // Tags
-    step >= STEPS.TAGS && h(Box, { marginBottom: 1 },
-      h(Text, { color: step === STEPS.TAGS ? 'cyan' : 'gray' }, 'Tags (optional): '),
-      step === STEPS.TAGS
-        ? h(TextInput, { value: tags, onChange: setTags, onSubmit: handleTagsSubmit })
-        : h(Text, { color: 'gray' }, tags || '(none)')
-    ),
+    // Form fields
+    h(Box, {
+      flexDirection: 'column',
+      borderStyle: 'round',
+      borderColor: colors.border,
+      paddingX: 2,
+      paddingY: 1,
+      marginBottom: 1
+    },
+      // Key field
+      h(InputField, {
+        label: 'Key',
+        fieldValue: key,
+        isActive: step === STEPS.KEY,
+        onChange: setKey,
+        onSubmit: handleKeySubmit,
+        placeholder: 'API_KEY'
+      }),
 
-    // Confirm
-    step === STEPS.CONFIRM && h(Box, { flexDirection: 'column', marginTop: 1 },
-      h(Text, null, 'Add this variable? Press Enter to confirm'),
-      h(TextInput, { value: '', onChange: () => {}, onSubmit: handleConfirm })
-    ),
+      // Value field
+      step >= STEPS.VALUE && h(InputField, {
+        label: 'Value',
+        fieldValue: value,
+        isActive: step === STEPS.VALUE,
+        onChange: setValue,
+        onSubmit: handleValueSubmit,
+        placeholder: 'your-secret-value'
+      }),
 
-    h(Box, { marginTop: 1 },
-      h(Text, { color: 'gray' }, 'Enter to continue, Esc to go back')
+      // Tags field
+      step >= STEPS.TAGS && h(InputField, {
+        label: 'Tags',
+        fieldValue: tags,
+        isActive: step === STEPS.TAGS,
+        onChange: setTags,
+        onSubmit: handleTagsSubmit,
+        placeholder: 'prod, api (comma separated)'
+      }),
+
+      // Confirm
+      step === STEPS.CONFIRM && h(Box, { flexDirection: 'column', marginTop: 1 },
+        h(Box, { marginBottom: 1 },
+          h(Text, { color: colors.success, bold: true }, `${icons.check} Ready to add!`)
+        ),
+        h(Text, { color: colors.textDim }, 'Press '),
+        h(Text, { color: colors.accent }, 'Enter'),
+        h(Text, { color: colors.textDim }, ' to confirm'),
+        h(TextInput, { value: '', onChange: () => {}, onSubmit: handleConfirm })
+      )
     )
   );
 }

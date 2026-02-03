@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
+import Spinner from 'ink-spinner';
 import { getAllVariables, getAllTags } from '../../core/store.js';
+import { colors, icons, getTagColor } from '../theme.js';
 
 const { createElement: h } = React;
 
-export default function ListView({ onBack, onSelect, onAdd, showMessage }) {
+// Tag badge component
+function TagBadge({ tag }) {
+  return h(Text, { color: getTagColor(tag) }, ` ${tag} `);
+}
+
+// Truncate value for display
+function truncateValue(value, maxLen = 18) {
+  if (value.length <= maxLen) return value;
+  return value.slice(0, maxLen - 3) + '...';
+}
+
+export default function ListView({ onBack, onSelect, onAdd, showMessage, setFooterHints }) {
   const [vars, setVars] = useState({});
   const [loading, setLoading] = useState(true);
   const [allTags, setAllTags] = useState([]);
@@ -29,6 +42,25 @@ export default function ListView({ onBack, onSelect, onAdd, showMessage }) {
     loadData(selectedTag);
   }, [selectedTag]);
 
+  // Update footer hints based on current state
+  useEffect(() => {
+    if (showTagFilter) {
+      setFooterHints([]);
+      return;
+    }
+
+    const hints = [
+      { key: 'a', label: 'add' }
+    ];
+    if (allTags.length > 0) {
+      hints.push({ key: 'f', label: 'filter' });
+    }
+    if (selectedTag) {
+      hints.push({ key: 'c', label: 'clear' });
+    }
+    setFooterHints(hints);
+  }, [showTagFilter, allTags.length, selectedTag, setFooterHints]);
+
   useInput((input, key) => {
     if (showTagFilter) {
       if (key.escape) {
@@ -38,7 +70,7 @@ export default function ListView({ onBack, onSelect, onAdd, showMessage }) {
     }
     if (key.escape) onBack();
     if (input === 'a') onAdd();
-    if (input === 't' && allTags.length > 0) {
+    if (input === 'f' && allTags.length > 0) {
       setShowTagFilter(true);
     }
     if (input === 'c' && selectedTag) {
@@ -46,23 +78,32 @@ export default function ListView({ onBack, onSelect, onAdd, showMessage }) {
     }
   });
 
-  if (loading) return h(Text, null, 'Loading...');
+  if (loading) {
+    return h(Box, { padding: 1 },
+      h(Text, { color: colors.accent },
+        h(Spinner, { type: 'dots' }),
+        ' Loading...'
+      )
+    );
+  }
 
   // Tag filter view
   if (showTagFilter) {
     const tagItems = [
-      { label: '(All - Clear Filter)', value: null },
-      ...allTags.map(tag => ({ label: tag, value: tag }))
+      { label: `${icons.bullet} All (Clear Filter)`, value: null },
+      ...allTags.map(tag => ({ label: `${icons.tags} ${tag}`, value: tag }))
     ];
 
     return h(Box, { flexDirection: 'column' },
       h(Box, { marginBottom: 1 },
-        h(Text, { bold: true }, 'Select Tag to Filter'),
-        h(Text, { color: 'gray' }, '  •  Press '),
-        h(Text, { color: 'cyan' }, 'Esc'),
-        h(Text, { color: 'gray' }, ' to cancel')
+        h(Text, { bold: true, color: colors.primary }, `${icons.tags} Select Tag`)
       ),
-      h(Box, { flexDirection: 'column', borderStyle: 'single', borderColor: 'blue', paddingX: 1 },
+      h(Box, {
+        flexDirection: 'column',
+        borderStyle: 'round',
+        borderColor: colors.primary,
+        paddingX: 1
+      },
         h(SelectInput, {
           items: tagItems,
           onSelect: (item) => {
@@ -76,53 +117,90 @@ export default function ListView({ onBack, onSelect, onAdd, showMessage }) {
 
   const entries = Object.entries(vars);
 
+  // Title bar
+  const TitleBar = () => h(Box, { marginBottom: 1 },
+    h(Text, { bold: true, color: colors.primary }, `${icons.list} Variables `),
+    h(Text, { color: colors.textDim }, `(${entries.length})`),
+    selectedTag && h(Text, { color: colors.accent }, ` [${selectedTag}]`)
+  );
+
   if (entries.length === 0) {
     return h(Box, { flexDirection: 'column' },
-      selectedTag && h(Box, { marginBottom: 1 },
-        h(Text, { color: 'blue' }, `Tag: ${selectedTag}`),
-        h(Text, { color: 'gray' }, '  •  Press '),
-        h(Text, { color: 'cyan' }, 'c'),
-        h(Text, { color: 'gray' }, ' to clear filter')
-      ),
-      h(Text, { color: 'yellow' }, selectedTag ? 'No variables with this tag.' : 'No variables found.'),
-      h(Box, { marginTop: 1 },
-        h(Text, { color: 'gray' }, 'Press '),
-        h(Text, { color: 'cyan' }, 'a'),
-        h(Text, { color: 'gray' }, ' to add, '),
-        h(Text, { color: 'cyan' }, 'Esc'),
-        h(Text, { color: 'gray' }, ' to go back')
+      h(TitleBar),
+      h(Box, {
+        borderStyle: 'round',
+        borderColor: colors.border,
+        paddingX: 2,
+        paddingY: 1
+      },
+        h(Text, { color: colors.warning },
+          selectedTag ? `${icons.warning} No variables with tag "${selectedTag}"` : `${icons.info} No variables found`
+        )
       )
     );
   }
 
-  const items = entries.map(([key, data]) => {
-    const sortedTags = (data.tags || []).slice().sort().join(', ');
-    const valueDisplay = data.value.slice(0, 20) + (data.value.length > 20 ? '...' : '');
-    return {
-      label: `${key.padEnd(20)} ${valueDisplay.padEnd(24)} ${sortedTags}`,
-      value: key
-    };
-  });
+  // Build a map for quick lookup
+  const varsMap = vars;
+
+  // Build list items
+  const items = entries.map(([key]) => ({
+    label: key,
+    value: key
+  }));
+
+  const itemComponent = ({ isSelected, label }) => {
+    const data = varsMap[label];
+    if (!data) return h(Text, null, label);
+
+    const valueDisplay = truncateValue(data.value);
+    const sortedTags = (data.tags || []).slice().sort();
+
+    return h(Box, { width: '100%' },
+      h(Box, { width: 20 },
+        h(Text, {
+          color: isSelected ? colors.accent : colors.text,
+          bold: isSelected
+        }, label)
+      ),
+      h(Box, { width: 22 },
+        h(Text, {
+          color: isSelected ? colors.primaryLight : colors.textDim
+        }, valueDisplay)
+      ),
+      h(Box, null,
+        ...sortedTags.map((tag, i) =>
+          h(TagBadge, { key: i, tag })
+        )
+      )
+    );
+  };
+
+  const indicatorComponent = ({ isSelected }) =>
+    h(Text, { color: isSelected ? colors.accent : colors.textDim },
+      isSelected ? `${icons.arrow} ` : '  '
+    );
 
   return h(Box, { flexDirection: 'column' },
-    h(Box, { marginBottom: 1 },
-      h(Text, { bold: true }, `Variables (${entries.length})`),
-      selectedTag && h(Text, { color: 'blue' }, ` [${selectedTag}]`),
-      h(Text, { color: 'gray' }, '  •  '),
-      h(Text, { color: 'cyan' }, 'a'),
-      h(Text, { color: 'gray' }, ' add'),
-      allTags.length > 0 && h(Text, { color: 'gray' }, '  '),
-      allTags.length > 0 && h(Text, { color: 'cyan' }, 't'),
-      allTags.length > 0 && h(Text, { color: 'gray' }, ' tag'),
-      selectedTag && h(Text, { color: 'gray' }, '  '),
-      selectedTag && h(Text, { color: 'cyan' }, 'c'),
-      selectedTag && h(Text, { color: 'gray' }, ' clear')
-    ),
-    h(Box, { flexDirection: 'column', borderStyle: 'single', borderColor: 'gray', paddingX: 1 },
-      h(Box, { marginBottom: 1 },
-        h(Text, { bold: true, color: 'gray' }, 'KEY'.padEnd(20) + ' ' + 'VALUE'.padEnd(24) + ' TAGS')
+    h(TitleBar),
+    h(Box, {
+      flexDirection: 'column',
+      borderStyle: 'round',
+      borderColor: colors.border,
+      paddingX: 1
+    },
+      // Header row
+      h(Box, { marginBottom: 1, paddingX: 1 },
+        h(Text, { color: colors.textMuted, bold: true }, '  KEY'.padEnd(22)),
+        h(Text, { color: colors.textMuted, bold: true }, 'VALUE'.padEnd(22)),
+        h(Text, { color: colors.textMuted, bold: true }, 'TAGS')
       ),
-      h(SelectInput, { items, onSelect: (item) => onSelect(item.value) })
+      h(SelectInput, {
+        items,
+        onSelect: (item) => onSelect(item.value),
+        indicatorComponent,
+        itemComponent
+      })
     )
   );
 }

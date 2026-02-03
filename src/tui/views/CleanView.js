@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
@@ -6,22 +6,28 @@ import path from 'path';
 import os from 'os';
 import { cleanFile } from '../../core/sync.js';
 import { expandPath, fileExists } from '../../utils/file.js';
+import { colors, icons } from '../theme.js';
 
 const { createElement: h } = React;
 
 const TARGETS = [
-  { label: '~/.zshrc', value: 'zsh', path: path.join(os.homedir(), '.zshrc') },
-  { label: '~/.bashrc', value: 'bash', path: path.join(os.homedir(), '.bashrc') },
-  { label: '.env (current dir)', value: 'env', path: path.join(process.cwd(), '.env') },
-  { label: 'Custom path...', value: 'custom', path: null },
-  { label: 'Clean all preset files', value: 'all', path: null }
+  { label: `${icons.bullet} ~/.zshrc`, value: 'zsh', path: path.join(os.homedir(), '.zshrc') },
+  { label: `${icons.bullet} ~/.bashrc`, value: 'bash', path: path.join(os.homedir(), '.bashrc') },
+  { label: `${icons.bullet} .env (current dir)`, value: 'env', path: path.join(process.cwd(), '.env') },
+  { label: `${icons.edit} Custom path...`, value: 'custom', path: null },
+  { label: `${icons.clean} Clean all preset files`, value: 'all', path: null }
 ];
 
-export default function CleanView({ onBack, showMessage }) {
+export default function CleanView({ onBack, showMessage, setFooterHints }) {
   const [mode, setMode] = useState('select'); // select, custom, confirm
   const [customPath, setCustomPath] = useState('');
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [results, setResults] = useState([]);
+
+  // Update footer hints - CleanView has no special shortcuts
+  useEffect(() => {
+    setFooterHints([]);
+  }, [setFooterHints]);
 
   useInput((input, key) => {
     if (key.escape) {
@@ -133,18 +139,31 @@ export default function CleanView({ onBack, showMessage }) {
   // Custom path input mode
   if (mode === 'custom') {
     return h(Box, { flexDirection: 'column' },
-      h(Box, { marginBottom: 1 }, h(Text, { bold: true }, 'Clean Custom Path')),
       h(Box, { marginBottom: 1 },
-        h(Text, { color: 'gray' }, 'Enter file path: '),
-        h(TextInput, {
-          value: customPath,
-          onChange: setCustomPath,
-          onSubmit: handleCustomSubmit,
-          placeholder: '~/path/to/file'
-        })
+        h(Text, { bold: true, color: colors.primary }, `${icons.clean} Clean Custom Path`)
       ),
-      h(Box, { marginTop: 1 },
-        h(Text, { color: 'gray' }, 'Enter to clean, Esc to go back')
+      h(Box, {
+        flexDirection: 'column',
+        borderStyle: 'round',
+        borderColor: colors.accent,
+        paddingX: 2,
+        paddingY: 1
+      },
+        h(Box, { marginBottom: 1 },
+          h(Text, { color: colors.textDim }, 'Enter file path:')
+        ),
+        h(Box, {
+          borderStyle: 'round',
+          borderColor: colors.border,
+          paddingX: 1
+        },
+          h(TextInput, {
+            value: customPath,
+            onChange: setCustomPath,
+            onSubmit: handleCustomSubmit,
+            placeholder: '~/path/to/file'
+          })
+        )
       )
     );
   }
@@ -152,12 +171,25 @@ export default function CleanView({ onBack, showMessage }) {
   // Confirm mode
   if (mode === 'confirm' && selectedTarget) {
     return h(Box, { flexDirection: 'column' },
-      h(Text, { color: 'yellow', bold: true }, `Remove evk block from ${selectedTarget.label}?`),
-      h(Box, { marginTop: 1 },
+      h(Box, { marginBottom: 1 },
+        h(Text, { color: colors.warning, bold: true },
+          `${icons.warning} Remove evk block from ${selectedTarget.label}?`
+        )
+      ),
+      h(Box, {
+        flexDirection: 'column',
+        borderStyle: 'round',
+        borderColor: colors.warning,
+        paddingX: 2,
+        paddingY: 1
+      },
+        h(Text, { color: colors.textDim, marginBottom: 1 },
+          'Previously commented variables will be restored.'
+        ),
         h(SelectInput, {
           items: [
-            { label: 'No, cancel', value: 'no' },
-            { label: 'Yes, clean', value: 'yes' }
+            { label: `${icons.back} No, cancel`, value: 'no' },
+            { label: `${icons.clean} Yes, clean`, value: 'yes' }
           ],
           onSelect: handleConfirm
         })
@@ -167,31 +199,50 @@ export default function CleanView({ onBack, showMessage }) {
 
   // Select mode
   return h(Box, { flexDirection: 'column' },
-    h(Box, { marginBottom: 1 }, h(Text, { bold: true }, 'Clean evk Blocks')),
-    h(Box, { marginBottom: 1 }, h(Text, { color: 'gray' }, 'Select file to remove managed block from:')),
-    h(SelectInput, { items: TARGETS, onSelect: handleSelect }),
+    h(Box, { marginBottom: 1 },
+      h(Text, { bold: true, color: colors.primary }, `${icons.clean} Clean evk Blocks`)
+    ),
+    h(Box, {
+      flexDirection: 'column',
+      borderStyle: 'round',
+      borderColor: colors.border,
+      paddingX: 2,
+      paddingY: 1
+    },
+      h(Box, { marginBottom: 1 },
+        h(Text, { color: colors.textDim }, 'Select file to remove managed block from:')
+      ),
+      h(SelectInput, { items: TARGETS, onSelect: handleSelect })
+    ),
 
-    results.length > 0 && h(Box, { flexDirection: 'column', marginTop: 1, borderStyle: 'single', borderColor: 'gray', paddingX: 1 },
-      h(Text, { bold: true }, 'Results:'),
-      ...results.map((r, i) =>
-        h(Box, { key: i, flexDirection: 'column' },
-          h(Box, null,
-            h(Text, { color: r.status === 'cleaned' ? 'green' : 'gray' },
-              r.status === 'cleaned' ? '✓ ' : '  '
+    results.length > 0 && h(Box, {
+      flexDirection: 'column',
+      marginTop: 1,
+      borderStyle: 'round',
+      borderColor: colors.border,
+      paddingX: 2,
+      paddingY: 1
+    },
+      h(Text, { bold: true, color: colors.primary }, 'Results:'),
+      h(Box, { flexDirection: 'column', marginTop: 1 },
+        ...results.map((r, i) =>
+          h(Box, { key: i, flexDirection: 'column', marginBottom: i < results.length - 1 ? 1 : 0 },
+            h(Box, null,
+              h(Text, { color: r.status === 'cleaned' ? colors.success : colors.textMuted },
+                r.status === 'cleaned' ? `${icons.success} ` : '  '
+              ),
+              h(Text, { color: colors.textDim }, r.path),
+              h(Text, { color: r.status === 'cleaned' ? colors.success : colors.warning },
+                r.status === 'cleaned' ? ' (cleaned)' :
+                r.status === 'no_block' ? ' (no block)' : ' (not found)'
+              )
             ),
-            h(Text, { color: 'gray' }, r.path),
-            h(Text, { color: r.status === 'cleaned' ? 'green' : 'yellow' },
-              r.status === 'cleaned' ? ' (cleaned)' :
-              r.status === 'no_block' ? ' (no block)' : ' (not found)'
+            r.restored.length > 0 && h(Box, { marginLeft: 2 },
+              h(Text, { color: colors.accent }, `${icons.back} Restored: ${r.restored.join(', ')}`)
             )
-          ),
-          r.restored.length > 0 && h(Box, null,
-            h(Text, { color: 'cyan' }, `    Restored: ${r.restored.join(', ')}`)
           )
         )
       )
-    ),
-
-    h(Box, { marginTop: 1 }, h(Text, { color: 'gray' }, 'Esc to go back'))
+    )
   );
 }

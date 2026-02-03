@@ -3,13 +3,40 @@ import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import { getVariable, removeVariable, addVariable } from '../../core/store.js';
+import { colors, icons, getTagColor } from '../theme.js';
 
 const { createElement: h } = React;
 
-export default function DetailView({ varKey, onBack, showMessage }) {
+// Info row component
+function InfoRow({ icon, label, value, valueColor }) {
+  return h(Box, { marginBottom: 0 },
+    h(Box, { width: 14 },
+      h(Text, { color: colors.textDim }, `${icon} `),
+      h(Text, { color: colors.textMuted, bold: true }, label)
+    ),
+    h(Text, { color: valueColor || colors.text }, value || '(empty)')
+  );
+}
+
+// Tag badges
+function TagBadges({ tags }) {
+  if (!tags || tags.length === 0) return h(Text, { color: colors.textMuted }, '(none)');
+  return h(Box, null,
+    ...tags.map((tag, i) =>
+      h(Text, { key: i, color: getTagColor(tag) }, `${tag}${i < tags.length - 1 ? '  ' : ''}`)
+    )
+  );
+}
+
+export default function DetailView({ varKey, onBack, showMessage, setFooterHints }) {
   const [data, setData] = useState(null);
   const [mode, setMode] = useState('view'); // view, edit, confirmDelete
   const [editValue, setEditValue] = useState('');
+
+  // Update footer hints - DetailView has no special shortcuts
+  useEffect(() => {
+    setFooterHints([]);
+  }, [setFooterHints]);
 
   useEffect(() => {
     const varData = getVariable(varKey);
@@ -72,17 +99,35 @@ export default function DetailView({ varKey, onBack, showMessage }) {
     }
   };
 
-  if (!data) return h(Text, { color: 'red' }, 'Variable not found');
+  if (!data) {
+    return h(Box, { padding: 1 },
+      h(Text, { color: colors.error }, `${icons.error} Variable not found`)
+    );
+  }
+
+  // Display value directly
+  const displayValue = data.value;
 
   // Confirm delete mode
   if (mode === 'confirmDelete') {
     return h(Box, { flexDirection: 'column' },
-      h(Text, { color: 'red', bold: true }, `Delete ${varKey}?`),
-      h(Box, { marginTop: 1 },
+      h(Box, { marginBottom: 1 },
+        h(Text, { color: colors.error, bold: true }, `${icons.delete} Delete "${varKey}"?`)
+      ),
+      h(Box, {
+        flexDirection: 'column',
+        borderStyle: 'round',
+        borderColor: colors.error,
+        paddingX: 2,
+        paddingY: 1
+      },
+        h(Text, { color: colors.textDim, marginBottom: 1 },
+          'This action cannot be undone.'
+        ),
         h(SelectInput, {
           items: [
-            { label: 'No, cancel', value: 'no' },
-            { label: 'Yes, delete', value: 'yes' }
+            { label: `${icons.back} No, cancel`, value: 'no' },
+            { label: `${icons.delete} Yes, delete`, value: 'yes' }
           ],
           onSelect: handleDeleteConfirm
         })
@@ -94,54 +139,100 @@ export default function DetailView({ varKey, onBack, showMessage }) {
   if (mode === 'edit') {
     return h(Box, { flexDirection: 'column' },
       h(Box, { marginBottom: 1 },
-        h(Text, { bold: true }, 'Edit '),
-        h(Text, { bold: true, color: 'cyan' }, varKey)
+        h(Text, { bold: true, color: colors.primary }, `${icons.edit} Edit `),
+        h(Text, { bold: true, color: colors.accent }, varKey)
       ),
-      h(Box, { marginBottom: 1 },
-        h(Text, { color: 'gray' }, 'New value: '),
-        h(TextInput, {
-          value: editValue,
-          onChange: setEditValue,
-          onSubmit: handleEditSubmit
-        })
-      ),
-      h(Box, { marginTop: 1 },
-        h(Text, { color: 'gray' }, 'Enter to save, Esc to cancel')
+      h(Box, {
+        flexDirection: 'column',
+        borderStyle: 'round',
+        borderColor: colors.accent,
+        paddingX: 2,
+        paddingY: 1
+      },
+        h(Box, { marginBottom: 1 },
+          h(Text, { color: colors.textDim }, 'New value:')
+        ),
+        h(Box, {
+          borderStyle: 'round',
+          borderColor: colors.border,
+          paddingX: 1
+        },
+          h(TextInput, {
+            value: editValue,
+            onChange: setEditValue,
+            onSubmit: handleEditSubmit
+          })
+        )
       )
     );
   }
 
   // View mode
-  return h(Box, { flexDirection: 'column' },
-    h(Box, { marginBottom: 1 }, h(Text, { bold: true, color: 'cyan' }, varKey)),
+  const actionItems = [
+    { label: `${icons.edit}  Edit value`, value: 'edit' },
+    { label: `${icons.delete}  Delete`, value: 'delete' },
+    { label: `${icons.back}  Back to list`, value: 'back' }
+  ];
 
-    h(Box, { flexDirection: 'column', borderStyle: 'single', borderColor: 'gray', paddingX: 1, marginBottom: 1 },
-      h(Box, null,
-        h(Text, { color: 'gray', bold: true }, 'Value:'.padEnd(12)),
-        h(Text, { color: data.value ? undefined : 'gray' }, data.value || '(empty)')
+  return h(Box, { flexDirection: 'column' },
+    // Title
+    h(Box, { marginBottom: 1 },
+      h(Text, { bold: true, color: colors.primary }, `${icons.key} `),
+      h(Text, { bold: true, color: colors.accent }, varKey)
+    ),
+
+    // Info card
+    h(Box, {
+      flexDirection: 'column',
+      borderStyle: 'round',
+      borderColor: colors.border,
+      paddingX: 2,
+      paddingY: 1,
+      marginBottom: 1
+    },
+      h(InfoRow, {
+        icon: icons.value,
+        label: 'Value:',
+        value: displayValue
+      }),
+
+      data.description && h(InfoRow, {
+        icon: icons.description,
+        label: 'Desc:',
+        value: data.description
+      }),
+
+      h(Box, { marginTop: data.description ? 0 : 0 },
+        h(Box, { width: 14 },
+          h(Text, { color: colors.textDim }, `${icons.tags} `),
+          h(Text, { color: colors.textMuted, bold: true }, 'Tags:')
+        ),
+        h(TagBadges, { tags: data.tags })
       ),
-      data.description && h(Box, null,
-        h(Text, { color: 'gray', bold: true }, 'Description:'.padEnd(12)),
-        h(Text, null, data.description)
-      ),
-      data.tags?.length > 0 && h(Box, null,
-        h(Text, { color: 'gray', bold: true }, 'Tags:'.padEnd(12)),
-        h(Text, { color: 'blue' }, data.tags.join(', '))
-      ),
-      data.created_at && h(Box, null,
-        h(Text, { color: 'gray', bold: true }, 'Created:'.padEnd(12)),
-        h(Text, { color: 'gray' }, data.created_at)
+
+      data.created_at && h(Box, { marginTop: 1 },
+        h(InfoRow, {
+          icon: icons.time,
+          label: 'Created:',
+          value: new Date(data.created_at).toLocaleString(),
+          valueColor: colors.textMuted
+        })
       )
     ),
 
-    h(Text, { color: 'gray' }, 'Actions:'),
-    h(SelectInput, {
-      items: [
-        { label: 'Edit value', value: 'edit' },
-        { label: 'Delete', value: 'delete' },
-        { label: 'Back to list', value: 'back' }
-      ],
-      onSelect: handleAction
-    })
+    // Actions
+    h(Box, { marginBottom: 1 },
+      h(Text, { color: colors.textDim }, 'Actions:')
+    ),
+    h(Box, {
+      borderStyle: 'round',
+      borderColor: colors.border,
+      paddingX: 1
+    },
+      h(SelectInput, {
+        items: actionItems,
+        onSelect: handleAction
+      })
+    )
   );
 }

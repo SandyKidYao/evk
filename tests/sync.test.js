@@ -117,7 +117,7 @@ export OTHER="value"
       expect(writtenContent).not.toContain('# export OTHER=');
     });
 
-    test('should mark deprecated variables', () => {
+    test('should preserve existing variables in append mode', () => {
       const existingContent = `
 # === evk Managed Block ===
 API_KEY=value
@@ -126,12 +126,15 @@ OLD_KEY=deprecated
 `;
       fileMock.readFileSafe.mockReturnValue(existingContent);
 
-      const vars = { API_KEY: { value: 'value' } };
+      const vars = { API_KEY: { value: 'new-value' } };
       syncToFile('/path/to/.env', vars);
 
       const writtenContent = fileMock.writeFileSafe.mock.calls[0][1];
-      expect(writtenContent).toContain('# OLD_KEY=deprecated');
-      expect(writtenContent).toContain('Deprecated on');
+      // OLD_KEY should be preserved (not deprecated) in append mode
+      expect(writtenContent).toContain('OLD_KEY=deprecated');
+      expect(writtenContent).not.toContain('# OLD_KEY=deprecated');
+      // API_KEY should be updated
+      expect(writtenContent).toContain('API_KEY=new-value');
     });
   });
 
