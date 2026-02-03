@@ -4,28 +4,45 @@ import os from 'os';
 import YAML from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 
-const STORE_DIR = path.join(os.homedir(), '.evk');
-const STORE_PATH = path.join(STORE_DIR, 'store.yaml');
+/**
+ * Get store directory and path.
+ * Supports custom path via EVK_STORE_PATH environment variable for testing.
+ * If EVK_STORE_PATH is set, use it; otherwise use default ~/.evk/store.yaml
+ */
+function getStorePaths() {
+  const customPath = process.env.EVK_STORE_PATH;
+  if (customPath) {
+    return {
+      dir: path.dirname(customPath),
+      path: customPath
+    };
+  }
+  const dir = path.join(os.homedir(), '.evk');
+  return {
+    dir,
+    path: path.join(dir, 'store.yaml')
+  };
+}
 
 /**
  * Get the store directory path
  */
 export function getStoreDir() {
-  return STORE_DIR;
+  return getStorePaths().dir;
 }
 
 /**
  * Get the store file path
  */
 export function getStorePath() {
-  return STORE_PATH;
+  return getStorePaths().path;
 }
 
 /**
  * Check if store exists
  */
 export function storeExists() {
-  return fs.existsSync(STORE_PATH);
+  return fs.existsSync(getStorePath());
 }
 
 /**
@@ -37,7 +54,7 @@ export function readStore() {
     throw new Error('evk not initialized. Run `evk init` first.');
   }
 
-  const content = fs.readFileSync(STORE_PATH, 'utf-8');
+  const content = fs.readFileSync(getStorePath(), 'utf-8');
   return YAML.parse(content);
 }
 
@@ -47,7 +64,7 @@ export function readStore() {
  */
 export function writeStore(data) {
   const content = YAML.stringify(data, { indent: 2 });
-  fs.writeFileSync(STORE_PATH, content, { mode: 0o600 });
+  fs.writeFileSync(getStorePath(), content, { mode: 0o600 });
 }
 
 /**
@@ -131,7 +148,7 @@ export function initStore() {
     return false;
   }
 
-  fs.mkdirSync(STORE_DIR, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(getStoreDir(), { recursive: true, mode: 0o700 });
 
   const template = {
     version: 2,
@@ -365,10 +382,11 @@ export function flattenVariables(vars, tagPriority = []) {
  * @returns {boolean} True if removed, false if not exists
  */
 export function purgeStore() {
-  if (!fs.existsSync(STORE_DIR)) {
+  const storeDir = getStoreDir();
+  if (!fs.existsSync(storeDir)) {
     return false;
   }
 
-  fs.rmSync(STORE_DIR, { recursive: true, force: true });
+  fs.rmSync(storeDir, { recursive: true, force: true });
   return true;
 }
