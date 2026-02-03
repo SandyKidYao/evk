@@ -20,6 +20,11 @@ jest.unstable_mockModule('fs', () => ({
   rmSync: jest.fn()
 }));
 
+// Mock uuid
+jest.unstable_mockModule('uuid', () => ({
+  v4: jest.fn(() => 'test-uuid-' + Math.random().toString(36).substr(2, 9))
+}));
+
 // Import after mocking
 const fsMock = await import('fs');
 const {
@@ -33,9 +38,11 @@ const {
   addVariable,
   removeVariable,
   getVariable,
+  getVariableById,
   getAllVariables,
   getAllTags,
   getVariablesByKeys,
+  flattenVariables,
   purgeStore
 } = await import('../src/core/store.js');
 
@@ -74,7 +81,7 @@ describe('Store Module', () => {
 
   describe('readStore', () => {
     test('should read and parse store file', () => {
-      const mockData = { version: 1, vars: { KEY: { value: 'test' } } };
+      const mockData = { version: 2, vars: [] };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockData));
 
@@ -91,7 +98,7 @@ describe('Store Module', () => {
 
   describe('writeStore', () => {
     test('should write data to store file', () => {
-      const data = { version: 1, vars: {} };
+      const data = { version: 2, vars: [] };
       writeStore(data);
 
       expect(fsMock.default.writeFileSync).toHaveBeenCalledWith(
@@ -103,7 +110,7 @@ describe('Store Module', () => {
   });
 
   describe('initStore', () => {
-    test('should create store when it does not exist', () => {
+    test('should create store with version 2 when it does not exist', () => {
       fsMock.default.existsSync.mockReturnValue(false);
 
       const result = initStore();
@@ -111,6 +118,12 @@ describe('Store Module', () => {
       expect(result).toBe(true);
       expect(fsMock.default.mkdirSync).toHaveBeenCalledWith(STORE_DIR, { recursive: true, mode: 0o700 });
       expect(fsMock.default.writeFileSync).toHaveBeenCalled();
+
+      // Verify the written content has version 2 and empty array
+      const writtenContent = fsMock.default.writeFileSync.mock.calls[0][1];
+      const parsed = YAML.parse(writtenContent);
+      expect(parsed.version).toBe(2);
+      expect(parsed.vars).toEqual([]);
     });
 
     test('should return false when store already exists', () => {
@@ -135,7 +148,9 @@ describe('Store Module', () => {
     });
 
     test('should return false when store already exists', () => {
+      const mockStore = { version: 2, vars: [] };
       fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = ensureStore();
 
@@ -145,134 +160,249 @@ describe('Store Module', () => {
   });
 
   describe('addVariable', () => {
-    test('should add new variable', () => {
-      const mockStore = { version: 1, vars: {} };
+    test('should add new variable to array', () => {
+      const mockStore = { version: 2, vars: [] };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = addVariable('API_KEY', 'sk-123', { description: 'API key' });
 
+      expect(result.key).toBe('API_KEY');
       expect(result.value).toBe('sk-123');
       expect(result.description).toBe('API key');
+      expect(result.id).toBeDefined();
       expect(result.created_at).toBeDefined();
       expect(result.updated_at).toBeDefined();
     });
 
-    test('should update existing variable and preserve created_at', () => {
+    test('should update existing variable when key + tags match', () => {
       const existingVar = {
+        id: 'existing-id',
+        key: 'API_KEY',
         value: 'old-value',
         description: 'Old desc',
-        tags: ['tag1'],
+        tags: ['prod'],
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z'
       };
-      const mockStore = { version: 1, vars: { API_KEY: existingVar } };
+      const mockStore = { version: 2, vars: [existingVar] };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
-      const result = addVariable('API_KEY', 'new-value');
+      const result = addVariable('API_KEY', 'new-value', { tags: ['prod'] });
 
       expect(result.value).toBe('new-value');
+      expect(result.id).toBe('existing-id');
       expect(result.created_at).toBe('2023-01-01T00:00:00.000Z');
-      expect(result.description).toBe('Old desc');
     });
 
-    test('should add variable with tags', () => {
-      const mockStore = { version: 1, vars: {} };
+    test('should create new entry when same key but different tags', () => {
+      const existingVar = {
+        id: 'existing-id',
+        key: 'API_KEY',
+        value: 'prod-value',
+        tags: ['prod'],
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z'
+      };
+      const mockStore = { version: 2, vars: [existingVar] };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
-      const result = addVariable('API_KEY', 'value', { tags: ['prod', 'api'] });
+      const result = addVariable('API_KEY', 'dev-value', { tags: ['dev'] });
 
-      expect(result.tags).toEqual(['prod', 'api']);
+      expect(result.value).toBe('dev-value');
+      expect(result.id).not.toBe('existing-id');
+      expect(result.tags).toEqual(['dev']);
+    });
+
+    test('should normalize and sort tags', () => {
+      const mockStore = { version: 2, vars: [] };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = addVariable('API_KEY', 'value', { tags: ['prod', 'api', 'prod'] });
+
+      expect(result.tags).toEqual(['api', 'prod']);
     });
   });
 
   describe('removeVariable', () => {
-    test('should remove existing variable', () => {
-      const mockStore = { version: 1, vars: { API_KEY: { value: 'test' } } };
+    test('should remove variable by key', () => {
+      const mockStore = {
+        version: 2,
+        vars: [
+          { id: 'id1', key: 'API_KEY', value: 'test', tags: [] },
+          { id: 'id2', key: 'OTHER', value: 'other', tags: [] }
+        ]
+      };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = removeVariable('API_KEY');
 
-      expect(result).toBe(true);
+      expect(result).toBe(1);
       expect(fsMock.default.writeFileSync).toHaveBeenCalled();
     });
 
-    test('should return false when variable does not exist', () => {
-      const mockStore = { version: 1, vars: {} };
+    test('should remove variable by id', () => {
+      const mockStore = {
+        version: 2,
+        vars: [
+          { id: 'id1', key: 'API_KEY', value: 'test', tags: [] },
+          { id: 'id2', key: 'OTHER', value: 'other', tags: [] }
+        ]
+      };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = removeVariable('id1', { byId: true });
+
+      expect(result).toBe(1);
+    });
+
+    test('should remove variable by key + tags', () => {
+      const mockStore = {
+        version: 2,
+        vars: [
+          { id: 'id1', key: 'API_KEY', value: 'dev', tags: ['dev'] },
+          { id: 'id2', key: 'API_KEY', value: 'prod', tags: ['prod'] }
+        ]
+      };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = removeVariable('API_KEY', { tags: ['dev'] });
+
+      expect(result).toBe(1);
+    });
+
+    test('should return 0 when variable does not exist', () => {
+      const mockStore = { version: 2, vars: [] };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = removeVariable('NONEXISTENT');
 
-      expect(result).toBe(false);
+      expect(result).toBe(0);
     });
   });
 
   describe('getVariable', () => {
-    test('should return variable when it exists', () => {
-      const mockVar = { value: 'test', description: 'Test var' };
-      const mockStore = { version: 1, vars: { API_KEY: mockVar } };
+    test('should return array of matches when no tags specified', () => {
+      const mockStore = {
+        version: 2,
+        vars: [
+          { id: 'id1', key: 'API_KEY', value: 'dev', tags: ['dev'] },
+          { id: 'id2', key: 'API_KEY', value: 'prod', tags: ['prod'] }
+        ]
+      };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = getVariable('API_KEY');
 
-      expect(result).toEqual(mockVar);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(2);
     });
 
-    test('should return null when variable does not exist', () => {
-      const mockStore = { version: 1, vars: {} };
+    test('should return exact match when tags specified', () => {
+      const mockStore = {
+        version: 2,
+        vars: [
+          { id: 'id1', key: 'API_KEY', value: 'dev', tags: ['dev'] },
+          { id: 'id2', key: 'API_KEY', value: 'prod', tags: ['prod'] }
+        ]
+      };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = getVariable('API_KEY', { tags: ['prod'] });
+
+      expect(result.value).toBe('prod');
+      expect(result.id).toBe('id2');
+    });
+
+    test('should return empty array when variable does not exist', () => {
+      const mockStore = { version: 2, vars: [] };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = getVariable('NONEXISTENT');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getVariableById', () => {
+    test('should return variable by id', () => {
+      const mockStore = {
+        version: 2,
+        vars: [
+          { id: 'id1', key: 'API_KEY', value: 'test', tags: [] }
+        ]
+      };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = getVariableById('id1');
+
+      expect(result.key).toBe('API_KEY');
+      expect(result.value).toBe('test');
+    });
+
+    test('should return null when id does not exist', () => {
+      const mockStore = { version: 2, vars: [] };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = getVariableById('nonexistent');
 
       expect(result).toBeNull();
     });
   });
 
   describe('getAllVariables', () => {
-    test('should return all variables', () => {
-      const mockVars = {
-        KEY1: { value: 'v1', tags: [] },
-        KEY2: { value: 'v2', tags: ['prod'] }
-      };
-      const mockStore = { version: 1, vars: mockVars };
+    test('should return all variables as array', () => {
+      const mockVars = [
+        { id: 'id1', key: 'KEY1', value: 'v1', tags: [] },
+        { id: 'id2', key: 'KEY2', value: 'v2', tags: ['prod'] }
+      ];
+      const mockStore = { version: 2, vars: mockVars };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = getAllVariables();
 
-      expect(result).toEqual(mockVars);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(2);
     });
 
     test('should filter by tags', () => {
-      const mockVars = {
-        KEY1: { value: 'v1', tags: ['dev'] },
-        KEY2: { value: 'v2', tags: ['prod'] },
-        KEY3: { value: 'v3', tags: ['prod', 'api'] }
-      };
-      const mockStore = { version: 1, vars: mockVars };
+      const mockVars = [
+        { id: 'id1', key: 'KEY1', value: 'v1', tags: ['dev'] },
+        { id: 'id2', key: 'KEY2', value: 'v2', tags: ['prod'] },
+        { id: 'id3', key: 'KEY3', value: 'v3', tags: ['prod', 'api'] }
+      ];
+      const mockStore = { version: 2, vars: mockVars };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = getAllVariables({ tags: ['prod'] });
 
-      expect(Object.keys(result)).toEqual(['KEY2', 'KEY3']);
+      expect(result.length).toBe(2);
+      expect(result.map(v => v.key)).toEqual(['KEY2', 'KEY3']);
     });
   });
 
   describe('getAllTags', () => {
     test('should return all unique tags sorted', () => {
-      const mockVars = {
-        KEY1: { value: 'v1', tags: ['dev', 'api'] },
-        KEY2: { value: 'v2', tags: ['prod'] },
-        KEY3: { value: 'v3', tags: ['prod', 'api'] }
-      };
-      const mockStore = { version: 1, vars: mockVars };
+      const mockVars = [
+        { id: 'id1', key: 'KEY1', value: 'v1', tags: ['dev', 'api'] },
+        { id: 'id2', key: 'KEY2', value: 'v2', tags: ['prod'] },
+        { id: 'id3', key: 'KEY3', value: 'v3', tags: ['prod', 'api'] }
+      ];
+      const mockStore = { version: 2, vars: mockVars };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
@@ -282,11 +412,11 @@ describe('Store Module', () => {
     });
 
     test('should return empty array when no tags exist', () => {
-      const mockVars = {
-        KEY1: { value: 'v1', tags: [] },
-        KEY2: { value: 'v2' }
-      };
-      const mockStore = { version: 1, vars: mockVars };
+      const mockVars = [
+        { id: 'id1', key: 'KEY1', value: 'v1', tags: [] },
+        { id: 'id2', key: 'KEY2', value: 'v2', tags: [] }
+      ];
+      const mockStore = { version: 2, vars: mockVars };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
@@ -296,7 +426,7 @@ describe('Store Module', () => {
     });
 
     test('should return empty array when no variables exist', () => {
-      const mockStore = { version: 1, vars: {} };
+      const mockStore = { version: 2, vars: [] };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
@@ -308,30 +438,69 @@ describe('Store Module', () => {
 
   describe('getVariablesByKeys', () => {
     test('should return only specified variables', () => {
-      const mockVars = {
-        KEY1: { value: 'v1' },
-        KEY2: { value: 'v2' },
-        KEY3: { value: 'v3' }
-      };
-      const mockStore = { version: 1, vars: mockVars };
+      const mockVars = [
+        { id: 'id1', key: 'KEY1', value: 'v1', tags: [] },
+        { id: 'id2', key: 'KEY2', value: 'v2', tags: [] },
+        { id: 'id3', key: 'KEY3', value: 'v3', tags: [] }
+      ];
+      const mockStore = { version: 2, vars: mockVars };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = getVariablesByKeys(['KEY1', 'KEY3']);
 
-      expect(Object.keys(result)).toEqual(['KEY1', 'KEY3']);
-      expect(result.KEY2).toBeUndefined();
+      expect(result.length).toBe(2);
+      expect(result.map(v => v.key)).toEqual(['KEY1', 'KEY3']);
     });
 
     test('should skip nonexistent keys', () => {
-      const mockVars = { KEY1: { value: 'v1' } };
-      const mockStore = { version: 1, vars: mockVars };
+      const mockVars = [{ id: 'id1', key: 'KEY1', value: 'v1', tags: [] }];
+      const mockStore = { version: 2, vars: mockVars };
       fsMock.default.existsSync.mockReturnValue(true);
       fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
 
       const result = getVariablesByKeys(['KEY1', 'NONEXISTENT']);
 
-      expect(Object.keys(result)).toEqual(['KEY1']);
+      expect(result.length).toBe(1);
+      expect(result[0].key).toBe('KEY1');
+    });
+  });
+
+  describe('flattenVariables', () => {
+    test('should flatten array to object', () => {
+      const vars = [
+        { id: 'id1', key: 'KEY1', value: 'v1', tags: [], description: '' },
+        { id: 'id2', key: 'KEY2', value: 'v2', tags: [], description: '' }
+      ];
+
+      const result = flattenVariables(vars);
+
+      expect(result.KEY1.value).toBe('v1');
+      expect(result.KEY2.value).toBe('v2');
+    });
+
+    test('should handle same key conflicts with tag priority', () => {
+      const vars = [
+        { id: 'id1', key: 'API_KEY', value: 'dev-value', tags: ['dev'], description: '' },
+        { id: 'id2', key: 'API_KEY', value: 'prod-value', tags: ['prod'], description: '' }
+      ];
+
+      const result = flattenVariables(vars, ['dev', 'prod']);
+
+      // prod has higher priority (later in array), so its value should win
+      expect(result.API_KEY.value).toBe('prod-value');
+    });
+
+    test('should use last value when no tag priority', () => {
+      const vars = [
+        { id: 'id1', key: 'API_KEY', value: 'first', tags: ['a'], description: '' },
+        { id: 'id2', key: 'API_KEY', value: 'second', tags: ['b'], description: '' }
+      ];
+
+      const result = flattenVariables(vars, []);
+
+      // Both have same priority (-1), original order preserved, last wins
+      expect(result.API_KEY.value).toBe('second');
     });
   });
 

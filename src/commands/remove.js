@@ -9,20 +9,19 @@ export function removeCommand(key, options) {
   try {
     const filterTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
 
-    // Remove by tags
-    if (filterTags.length > 0) {
+    // Remove by tags only (no key specified)
+    if (!key && filterTags.length > 0) {
       const vars = getAllVariables({ tags: filterTags });
-      const keys = Object.keys(vars);
 
-      if (keys.length === 0) {
+      if (vars.length === 0) {
         logger.warn(`No variables found with tags: ${filterTags.join(', ')}`);
         return;
       }
 
-      for (const k of keys) {
-        removeVariable(k);
+      for (const v of vars) {
+        removeVariable(v.id, { byId: true });
       }
-      logger.success(`Removed ${keys.length} variable(s): ${keys.join(', ')}`);
+      logger.success(`Removed ${vars.length} variable(s)`);
       return;
     }
 
@@ -32,13 +31,33 @@ export function removeCommand(key, options) {
       process.exit(1);
     }
 
-    if (!getVariable(key)) {
+    // If tags specified with key, remove exact match
+    if (filterTags.length > 0) {
+      const count = removeVariable(key, { tags: filterTags });
+      if (count === 0) {
+        logger.warn(`Variable ${key} with tags [${filterTags.join(', ')}] not found.`);
+        return;
+      }
+      logger.success(`Removed ${key} [${filterTags.join(', ')}]`);
+      return;
+    }
+
+    // Remove all entries with matching key
+    const matches = getVariable(key);
+    if (matches.length === 0) {
       logger.warn(`Variable ${key} not found.`);
       return;
     }
 
-    removeVariable(key);
-    logger.success(`Removed ${key}`);
+    if (matches.length > 1) {
+      logger.info(`Found ${matches.length} entries for ${key}:`);
+      for (const m of matches) {
+        logger.dim(`  - [${m.tags.join(', ') || 'no tags'}]: ${m.value.slice(0, 30)}${m.value.length > 30 ? '...' : ''}`);
+      }
+    }
+
+    const count = removeVariable(key);
+    logger.success(`Removed ${count} entry/entries for ${key}`);
   } catch (err) {
     logger.error(`Failed to remove variable: ${err.message}`);
     process.exit(1);

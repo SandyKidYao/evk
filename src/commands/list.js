@@ -10,9 +10,8 @@ export function listCommand(options) {
   try {
     const tags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
     const vars = getAllVariables({ tags: tags.length > 0 ? tags : undefined });
-    const entries = Object.entries(vars);
 
-    if (entries.length === 0) {
+    if (vars.length === 0) {
       logger.info('No variables found.');
       return;
     }
@@ -25,11 +24,11 @@ export function listCommand(options) {
     }
 
     if (format === 'yaml') {
-      for (const [key, data] of entries) {
-        console.log(`${key}:`);
-        console.log(`  value: ${data.value}`);
-        if (data.description) console.log(`  description: ${data.description}`);
-        if (data.tags?.length > 0) console.log(`  tags: [${data.tags.join(', ')}]`);
+      for (const entry of vars) {
+        console.log(`${entry.key}:`);
+        console.log(`  value: ${entry.value}`);
+        if (entry.description) console.log(`  description: ${entry.description}`);
+        if (entry.tags?.length > 0) console.log(`  tags: [${entry.tags.join(', ')}]`);
       }
       return;
     }
@@ -39,21 +38,21 @@ export function listCommand(options) {
     console.log(chalk.bold('  KEY'.padEnd(30) + 'VALUE'.padEnd(40) + 'TAGS'));
     console.log(chalk.dim('  ' + '-'.repeat(80)));
 
-    for (const [key, data] of entries) {
-      const value = data.value.length > 35
-        ? data.value.slice(0, 32) + '...'
-        : data.value;
-      const tags = data.tags?.join(', ') || '';
+    for (const entry of vars) {
+      const value = entry.value.length > 35
+        ? entry.value.slice(0, 32) + '...'
+        : entry.value;
+      const tags = entry.tags?.join(', ') || '';
 
       console.log(
         '  ' +
-        chalk.cyan(key.padEnd(30)) +
+        chalk.cyan(entry.key.padEnd(30)) +
         value.padEnd(40) +
         chalk.dim(tags)
       );
     }
     console.log('');
-    logger.dim(`  Total: ${entries.length} variable(s)`);
+    logger.dim(`  Total: ${vars.length} variable(s)`);
 
   } catch (err) {
     logger.error(`Failed to list variables: ${err.message}`);

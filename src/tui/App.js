@@ -24,7 +24,7 @@ const VIEWS = {
 export default function App() {
   const { exit } = useApp();
   const [view, setView] = useState(VIEWS.MENU);
-  const [selectedKey, setSelectedKey] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [message, setMessage] = useState(null);
   const [footerHints, setFooterHints] = useState([]);
 
@@ -41,8 +41,8 @@ export default function App() {
   const goToAdd = () => setView(VIEWS.ADD);
   const goToSync = () => setView(VIEWS.SYNC);
   const goToClean = () => setView(VIEWS.CLEAN);
-  const goToDetail = (key) => {
-    setSelectedKey(key);
+  const goToDetail = (id) => {
+    setSelectedId(id);
     setView(VIEWS.DETAIL);
   };
 
@@ -114,7 +114,7 @@ export default function App() {
     view === VIEWS.ADD && h(AddView, { onBack: goToList, onCancel: goToMenu, showMessage, setFooterHints: updateFooterHints }),
     view === VIEWS.SYNC && h(SyncView, { onBack: goToMenu, showMessage, setFooterHints: updateFooterHints }),
     view === VIEWS.CLEAN && h(CleanView, { onBack: goToMenu, showMessage, setFooterHints: updateFooterHints }),
-    view === VIEWS.DETAIL && h(DetailView, { varKey: selectedKey, onBack: goToList, showMessage, setFooterHints: updateFooterHints }),
+    view === VIEWS.DETAIL && h(DetailView, { varId: selectedId, onBack: goToList, showMessage, setFooterHints: updateFooterHints }),
 
     // Footer - shows message, hints, or navigation
     h(Box, {

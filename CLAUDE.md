@@ -71,6 +71,36 @@ Built with React + Ink. Located in `src/tui/`:
 
 Uses `React.createElement` directly (aliased as `h`) rather than JSX.
 
+### Data Structure (v2)
+
+Store file (`~/.evk/store.yaml`) uses array-based structure:
+
+```yaml
+version: 2
+vars:
+  - id: "uuid-1"
+    key: API_KEY
+    value: "dev-key"
+    tags: [dev]
+    description: ""
+    created_at: "2024-01-01T00:00:00.000Z"
+    updated_at: "2024-01-01T00:00:00.000Z"
+  - id: "uuid-2"
+    key: API_KEY
+    value: "prod-key"
+    tags: [prod]
+    description: ""
+    created_at: "2024-01-01T00:00:00.000Z"
+    updated_at: "2024-01-01T00:00:00.000Z"
+```
+
+Key design decisions:
+
+- **Same key, different tags** - Allows same variable name with different values for different tags (e.g., dev/prod)
+- **UUID identification** - Each entry has a unique `id` for TUI selection and deletion
+- **Update logic** - `key + tags (sorted)` exact match = update, otherwise create new entry
+- **Sync conflict resolution** - `flattenVariables(vars, tagPriority)` - later tags in priority list override earlier ones
+
 ### Key Patterns
 
 - **Managed Block** - When syncing, evk creates/updates a marked block in target files. Variables outside this block that conflict are commented with `# [evk] Commented out due to conflict:`

@@ -19,7 +19,7 @@ function truncateValue(value, maxLen = 18) {
 }
 
 export default function ListView({ onBack, onSelect, onAdd, showMessage, setFooterHints }) {
-  const [vars, setVars] = useState({});
+  const [vars, setVars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [allTags, setAllTags] = useState([]);
   const [selectedTag, setSelectedTag] = useState(null);
@@ -115,16 +115,14 @@ export default function ListView({ onBack, onSelect, onAdd, showMessage, setFoot
     );
   }
 
-  const entries = Object.entries(vars);
-
   // Title bar
   const TitleBar = () => h(Box, { marginBottom: 1 },
     h(Text, { bold: true, color: colors.primary }, `${icons.list} Variables `),
-    h(Text, { color: colors.textDim }, `(${entries.length})`),
+    h(Text, { color: colors.textDim }, `(${vars.length})`),
     selectedTag && h(Text, { color: colors.accent }, ` [${selectedTag}]`)
   );
 
-  if (entries.length === 0) {
+  if (vars.length === 0) {
     return h(Box, { flexDirection: 'column' },
       h(TitleBar),
       h(Box, {
@@ -140,18 +138,15 @@ export default function ListView({ onBack, onSelect, onAdd, showMessage, setFoot
     );
   }
 
-  // Build a map for quick lookup
-  const varsMap = vars;
-
-  // Build list items
-  const items = entries.map(([key]) => ({
-    label: key,
-    value: key
+  // Build list items - use id as value for unique identification
+  const items = vars.map(entry => ({
+    label: entry.key,
+    value: entry.id,
+    data: entry
   }));
 
-  const itemComponent = ({ isSelected, label }) => {
-    const data = varsMap[label];
-    if (!data) return h(Text, null, label);
+  const itemComponent = ({ isSelected, data }) => {
+    if (!data) return h(Text, null, '(unknown)');
 
     const valueDisplay = truncateValue(data.value);
     const sortedTags = (data.tags || []).slice().sort();
@@ -161,7 +156,7 @@ export default function ListView({ onBack, onSelect, onAdd, showMessage, setFoot
         h(Text, {
           color: isSelected ? colors.accent : colors.text,
           bold: isSelected
-        }, label)
+        }, data.key)
       ),
       h(Box, { width: 22 },
         h(Text, {

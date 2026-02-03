@@ -1,6 +1,6 @@
 import path from 'path';
 import os from 'os';
-import { getAllVariables, getVariablesByKeys, ensureStore } from '../core/store.js';
+import { getAllVariables, getVariablesByKeys, ensureStore, flattenVariables } from '../core/store.js';
 import { syncToFile } from '../core/sync.js';
 import { expandPath } from '../utils/file.js';
 import * as logger from '../utils/logger.js';
@@ -44,26 +44,29 @@ export function syncCommand(keys, options) {
 
     if (keys && keys.length > 0) {
       vars = getVariablesByKeys(keys);
-      if (Object.keys(vars).length === 0) {
+      if (vars.length === 0) {
         logger.warn('None of the specified keys were found.');
         return;
       }
     } else if (filterTags.length > 0) {
       vars = getAllVariables({ tags: filterTags });
-      if (Object.keys(vars).length === 0) {
+      if (vars.length === 0) {
         logger.warn(`No variables found with tags: ${filterTags.join(', ')}`);
         return;
       }
     } else {
       vars = getAllVariables();
-      if (Object.keys(vars).length === 0) {
+      if (vars.length === 0) {
         logger.warn('No variables to sync. Add some with: evk add <KEY> <VALUE>');
         return;
       }
     }
 
+    // Flatten variables - later tags in filterTags have higher priority
+    const flattened = flattenVariables(vars, filterTags);
+
     // Perform sync
-    const result = syncToFile(targetPath, vars);
+    const result = syncToFile(targetPath, flattened);
 
     logger.success(`Synced to ${result.path}`);
     logger.dim(`  ${result.total} variable(s): ${result.added} added, ${result.updated} updated, ${result.deprecated} deprecated`);

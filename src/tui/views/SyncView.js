@@ -5,7 +5,7 @@ import TextInput from 'ink-text-input';
 import Spinner from 'ink-spinner';
 import path from 'path';
 import os from 'os';
-import { getAllVariables, getAllTags } from '../../core/store.js';
+import { getAllVariables, getAllTags, flattenVariables } from '../../core/store.js';
 import { syncToFile } from '../../core/sync.js';
 import { expandPath } from '../../utils/file.js';
 import { colors, icons, getTagColor } from '../theme.js';
@@ -31,7 +31,7 @@ function truncateValue(value, maxLen = 18) {
 }
 
 export default function SyncView({ onBack, showMessage, setFooterHints }) {
-  const [vars, setVars] = useState({});
+  const [vars, setVars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [allTags, setAllTags] = useState([]);
@@ -68,8 +68,7 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
 
     // list mode hints
     const hints = [];
-    const entries = Object.entries(vars);
-    if (entries.length > 0) {
+    if (vars.length > 0) {
       hints.push({ key: 'a', label: 'sync all' });
     }
     if (allTags.length > 0) {
@@ -79,7 +78,7 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
       hints.push({ key: 'c', label: 'clear' });
     }
     setFooterHints(hints);
-  }, [showTagFilter, mode, vars, allTags.length, selectedTag, setFooterHints]);
+  }, [showTagFilter, mode, vars.length, allTags.length, selectedTag, setFooterHints]);
 
   useInput((input, key) => {
     if (syncing) return;
@@ -117,8 +116,10 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
     if (input === 'c' && selectedTag) {
       setSelectedTag(null);
     }
-    if (input === 'a' && Object.keys(vars).length > 0) {
-      doSync(targetPath, vars);
+    if (input === 'a' && vars.length > 0) {
+      // Flatten all vars and sync
+      const flattened = flattenVariables(vars, selectedTag ? [selectedTag] : []);
+      doSync(targetPath, flattened);
     }
   });
 
@@ -169,9 +170,12 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
   };
 
   const handleVarSelect = (item) => {
-    // Sync single variable
-    const singleVar = { [item.value]: vars[item.value] };
-    doSync(targetPath, singleVar);
+    // Sync single variable - find by id and flatten
+    const entry = vars.find(v => v.id === item.value);
+    if (entry) {
+      const singleVar = { [entry.key]: { value: entry.value, description: entry.description, tags: entry.tags } };
+      doSync(targetPath, singleVar);
+    }
   };
 
   if (loading) {
@@ -274,18 +278,15 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
   }
 
   // List mode - show variables to sync
-  const entries = Object.entries(vars);
-  const varsMap = vars;
-
   // Title bar
   const TitleBar = () => h(Box, { marginBottom: 1 },
     h(Text, { bold: true, color: colors.primary }, `${icons.sync} Sync to `),
     h(Text, { color: colors.accent }, targetLabel),
-    h(Text, { color: colors.textDim }, ` (${entries.length})`),
+    h(Text, { color: colors.textDim }, ` (${vars.length})`),
     selectedTag && h(Text, { color: colors.accent }, ` [${selectedTag}]`)
   );
 
-  if (entries.length === 0) {
+  if (vars.length === 0) {
     return h(Box, { flexDirection: 'column' },
       h(TitleBar),
       h(Box, {
@@ -301,15 +302,15 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
     );
   }
 
-  // Build list items
-  const items = entries.map(([key]) => ({
-    label: key,
-    value: key
+  // Build list items - use id as value
+  const items = vars.map(entry => ({
+    label: entry.key,
+    value: entry.id,
+    data: entry
   }));
 
-  const itemComponent = ({ isSelected, label }) => {
-    const data = varsMap[label];
-    if (!data) return h(Text, null, label);
+  const itemComponent = ({ isSelected, data }) => {
+    if (!data) return h(Text, null, '(unknown)');
 
     const valueDisplay = truncateValue(data.value);
     const sortedTags = (data.tags || []).slice().sort();
@@ -319,7 +320,7 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
         h(Text, {
           color: isSelected ? colors.accent : colors.text,
           bold: isSelected
-        }, label)
+        }, data.key)
       ),
       h(Box, { width: 22 },
         h(Text, {

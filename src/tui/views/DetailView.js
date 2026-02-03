@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
-import { getVariable, removeVariable, addVariable } from '../../core/store.js';
+import { getVariableById, removeVariable, addVariable } from '../../core/store.js';
 import { colors, icons, getTagColor } from '../theme.js';
 
 const { createElement: h } = React;
@@ -28,7 +28,7 @@ function TagBadges({ tags }) {
   );
 }
 
-export default function DetailView({ varKey, onBack, showMessage, setFooterHints }) {
+export default function DetailView({ varId, onBack, showMessage, setFooterHints }) {
   const [data, setData] = useState(null);
   const [mode, setMode] = useState('view'); // view, edit, confirmDelete
   const [editValue, setEditValue] = useState('');
@@ -39,12 +39,12 @@ export default function DetailView({ varKey, onBack, showMessage, setFooterHints
   }, [setFooterHints]);
 
   useEffect(() => {
-    const varData = getVariable(varKey);
+    const varData = getVariableById(varId);
     setData(varData);
     if (varData) {
       setEditValue(varData.value);
     }
-  }, [varKey]);
+  }, [varId]);
 
   useInput((input, key) => {
     if (key.escape) {
@@ -73,12 +73,12 @@ export default function DetailView({ varKey, onBack, showMessage, setFooterHints
 
   const handleEditSubmit = () => {
     try {
-      addVariable(varKey, editValue, {
+      addVariable(data.key, editValue, {
         description: data.description,
         tags: data.tags
       });
       setData({ ...data, value: editValue });
-      showMessage(`Updated ${varKey}`);
+      showMessage(`Updated ${data.key}`);
       setMode('view');
     } catch (err) {
       showMessage(err.message, 'error');
@@ -88,8 +88,8 @@ export default function DetailView({ varKey, onBack, showMessage, setFooterHints
   const handleDeleteConfirm = (item) => {
     if (item.value === 'yes') {
       try {
-        removeVariable(varKey);
-        showMessage(`Removed ${varKey}`);
+        removeVariable(varId, { byId: true });
+        showMessage(`Removed ${data.key}`);
         onBack();
       } catch (err) {
         showMessage(err.message, 'error');
@@ -112,7 +112,7 @@ export default function DetailView({ varKey, onBack, showMessage, setFooterHints
   if (mode === 'confirmDelete') {
     return h(Box, { flexDirection: 'column' },
       h(Box, { marginBottom: 1 },
-        h(Text, { color: colors.error, bold: true }, `${icons.delete} Delete "${varKey}"?`)
+        h(Text, { color: colors.error, bold: true }, `${icons.delete} Delete "${data.key}"?`)
       ),
       h(Box, {
         flexDirection: 'column',
@@ -140,7 +140,7 @@ export default function DetailView({ varKey, onBack, showMessage, setFooterHints
     return h(Box, { flexDirection: 'column' },
       h(Box, { marginBottom: 1 },
         h(Text, { bold: true, color: colors.primary }, `${icons.edit} Edit `),
-        h(Text, { bold: true, color: colors.accent }, varKey)
+        h(Text, { bold: true, color: colors.accent }, data.key)
       ),
       h(Box, {
         flexDirection: 'column',
@@ -178,7 +178,7 @@ export default function DetailView({ varKey, onBack, showMessage, setFooterHints
     // Title
     h(Box, { marginBottom: 1 },
       h(Text, { bold: true, color: colors.primary }, `${icons.key} `),
-      h(Text, { bold: true, color: colors.accent }, varKey)
+      h(Text, { bold: true, color: colors.accent }, data.key)
     ),
 
     // Info card

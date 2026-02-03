@@ -83,12 +83,14 @@ program
 program
   .command('show <key>')
   .description('Show detailed information about a variable')
+  .option('-t, --tags <tags>', 'Filter by tags (comma-separated)')
   .action(showCommand);
 
 // get command
 program
   .command('get <key>')
   .description('Get the value of a variable (for scripting)')
+  .option('-t, --tags <tags>', 'Filter by tags (comma-separated)')
   .action(getCommand);
 
 // tags command

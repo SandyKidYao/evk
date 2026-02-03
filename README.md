@@ -96,23 +96,6 @@ The TUI provides:
 - Sync to custom paths
 - Clean files with restore preview
 
-## Storage Format
-
-Variables are stored in `~/.evk/store.yaml`:
-
-```yaml
-version: 1
-vars:
-  API_KEY:
-    value: sk-xxx
-    description: OpenAI API Key
-    tags:
-      - prod
-      - api
-    created_at: 2024-01-01T00:00:00.000Z
-    updated_at: 2024-01-01T00:00:00.000Z
-```
-
 ## Managed Blocks
 
 When syncing to files, evk creates managed blocks:
