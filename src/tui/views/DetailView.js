@@ -2,19 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
-import { getVariableById, removeVariable, addVariable } from '../../core/store.js';
+import { getVariableById, removeVariable, updateVariableById } from '../../core/store.js';
 import { colors, icons, getTagColor } from '../theme.js';
+
+const EDIT_STEPS = { KEY: 0, VALUE: 1, TAGS: 2, CONFIRM: 3 };
+const EDIT_STEP_LABELS = ['Key', 'Value', 'Tags', 'Confirm'];
 
 const { createElement: h } = React;
 
 // Info row component
-function InfoRow({ icon, label, value, valueColor }) {
+function InfoRow({ label, value, valueColor, children }) {
   return h(Box, { marginBottom: 0 },
-    h(Box, { width: 14 },
-      h(Text, { color: colors.textDim }, `${icon} `),
+    h(Box, { width: 10 },
       h(Text, { color: colors.textMuted, bold: true }, label)
     ),
-    h(Text, { color: valueColor || colors.text }, value || '(empty)')
+    children || h(Text, { color: valueColor || colors.text }, value || '(empty)')
   );
 }
 
@@ -28,10 +30,49 @@ function TagBadges({ tags }) {
   );
 }
 
+// Step indicator for edit mode
+function EditStepIndicator({ currentStep, totalSteps }) {
+  const steps = [];
+  for (let i = 0; i < totalSteps; i++) {
+    const isActive = i === currentStep;
+    const isCompleted = i < currentStep;
+
+    if (i > 0) {
+      steps.push(
+        h(Text, {
+          key: `line-${i}`,
+          color: isCompleted ? colors.success : colors.textMuted
+        }, '━━')
+      );
+    }
+
+    steps.push(
+      h(Text, {
+        key: `step-${i}`,
+        color: isActive ? colors.accent : isCompleted ? colors.success : colors.textMuted,
+        bold: isActive
+      }, isCompleted ? icons.check : isActive ? icons.check : icons.uncheck)
+    );
+  }
+
+  return h(Box, { marginBottom: 1 },
+    h(Text, { color: colors.textDim }, '['),
+    ...steps,
+    h(Text, { color: colors.textDim }, ']  '),
+    h(Text, { color: colors.primary, bold: true }, `Step ${currentStep + 1}/${totalSteps}: `),
+    h(Text, { color: colors.text }, EDIT_STEP_LABELS[currentStep])
+  );
+}
+
 export default function DetailView({ varId, onBack, showMessage, setFooterHints }) {
   const [data, setData] = useState(null);
   const [mode, setMode] = useState('view'); // view, edit, confirmDelete
+
+  // Edit mode states
+  const [editStep, setEditStep] = useState(EDIT_STEPS.KEY);
+  const [editKey, setEditKey] = useState('');
   const [editValue, setEditValue] = useState('');
+  const [editTags, setEditTags] = useState('');
 
   // Update footer hints - DetailView has no special shortcuts
   useEffect(() => {
@@ -42,7 +83,10 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
     const varData = getVariableById(varId);
     setData(varData);
     if (varData) {
+      // Pre-fill edit fields
+      setEditKey(varData.key);
       setEditValue(varData.value);
+      setEditTags(varData.tags ? varData.tags.join(', ') : '');
     }
   }, [varId]);
 
@@ -50,16 +94,34 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
     if (key.escape) {
       if (mode === 'view') {
         onBack();
+      } else if (mode === 'edit') {
+        // In edit mode, go back a step or exit edit mode
+        if (editStep === EDIT_STEPS.KEY) {
+          // Reset and exit edit mode
+          resetEditFields();
+          setMode('view');
+        } else {
+          setEditStep(editStep - 1);
+        }
       } else {
         setMode('view');
-        if (data) setEditValue(data.value);
       }
     }
   });
 
+  const resetEditFields = () => {
+    if (data) {
+      setEditKey(data.key);
+      setEditValue(data.value);
+      setEditTags(data.tags ? data.tags.join(', ') : '');
+    }
+    setEditStep(EDIT_STEPS.KEY);
+  };
+
   const handleAction = (item) => {
     switch (item.value) {
       case 'edit':
+        setEditStep(EDIT_STEPS.KEY);
         setMode('edit');
         break;
       case 'delete':
@@ -71,14 +133,32 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
     }
   };
 
-  const handleEditSubmit = () => {
+  // Edit step handlers
+  const handleKeySubmit = () => {
+    if (!editKey.trim()) return;
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(editKey)) {
+      showMessage('Invalid key name', 'error');
+      return;
+    }
+    setEditStep(EDIT_STEPS.VALUE);
+  };
+
+  const handleValueSubmit = () => setEditStep(EDIT_STEPS.TAGS);
+  const handleTagsSubmit = () => setEditStep(EDIT_STEPS.CONFIRM);
+
+  const handleEditConfirm = () => {
     try {
-      addVariable(data.key, editValue, {
-        description: data.description,
-        tags: data.tags
+      const tagList = editTags.trim() ? editTags.split(',').map(t => t.trim()) : [];
+      const updated = updateVariableById(data.id, {
+        key: editKey,
+        value: editValue,
+        tags: tagList
       });
-      setData({ ...data, value: editValue });
-      showMessage(`Updated ${data.key}`);
+      if (updated) {
+        setData(updated);
+        showMessage(`Updated ${editKey}`);
+      }
+      resetEditFields();
       setMode('view');
     } catch (err) {
       showMessage(err.message, 'error');
@@ -135,33 +215,90 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
     );
   }
 
-  // Edit mode
+  // Edit mode - multi-step form
   if (mode === 'edit') {
-    return h(Box, { flexDirection: 'column' },
+    // Input field component for edit mode
+    const EditInputField = ({ label, fieldValue, isActive, onChange, onSubmit }) =>
       h(Box, { marginBottom: 1 },
-        h(Text, { bold: true, color: colors.primary }, `${icons.edit} Edit `),
-        h(Text, { bold: true, color: colors.accent }, data.key)
+        h(Box, { width: 16 },
+          h(Text, { color: isActive ? colors.accent : colors.textDim, bold: isActive },
+            `${isActive ? icons.arrow : ' '} ${label}: `
+          )
+        ),
+        isActive
+          ? h(Box, {
+              borderStyle: 'round',
+              borderColor: colors.accent,
+              paddingX: 1,
+              minWidth: 30
+            },
+              h(TextInput, {
+                value: fieldValue,
+                onChange,
+                onSubmit
+              })
+            )
+          : h(Text, { color: fieldValue ? colors.text : colors.textMuted },
+              fieldValue || '(empty)'
+            )
+      );
+
+    return h(Box, { flexDirection: 'column' },
+      // Title
+      h(Box, { marginBottom: 1 },
+        h(Text, { bold: true, color: colors.primary }, `${icons.edit} Edit Variable`)
       ),
+
+      // Step indicator
+      h(EditStepIndicator, { currentStep: editStep, totalSteps: 4 }),
+
+      // Form fields
       h(Box, {
         flexDirection: 'column',
         borderStyle: 'round',
-        borderColor: colors.accent,
+        borderColor: colors.border,
         paddingX: 2,
-        paddingY: 1
+        paddingY: 1,
+        marginBottom: 1
       },
-        h(Box, { marginBottom: 1 },
-          h(Text, { color: colors.textDim }, 'New value:')
-        ),
-        h(Box, {
-          borderStyle: 'round',
-          borderColor: colors.border,
-          paddingX: 1
-        },
-          h(TextInput, {
-            value: editValue,
-            onChange: setEditValue,
-            onSubmit: handleEditSubmit
-          })
+        // Key field
+        h(EditInputField, {
+          label: 'Key',
+          fieldValue: editKey,
+          isActive: editStep === EDIT_STEPS.KEY,
+          onChange: setEditKey,
+          onSubmit: handleKeySubmit
+        }),
+
+        // Value field
+        editStep >= EDIT_STEPS.VALUE && h(EditInputField, {
+          label: 'Value',
+          fieldValue: editValue,
+          isActive: editStep === EDIT_STEPS.VALUE,
+          onChange: setEditValue,
+          onSubmit: handleValueSubmit
+        }),
+
+        // Tags field
+        editStep >= EDIT_STEPS.TAGS && h(EditInputField, {
+          label: 'Tags',
+          fieldValue: editTags,
+          isActive: editStep === EDIT_STEPS.TAGS,
+          onChange: setEditTags,
+          onSubmit: handleTagsSubmit
+        }),
+
+        // Confirm
+        editStep === EDIT_STEPS.CONFIRM && h(Box, { flexDirection: 'column', marginTop: 1 },
+          h(Box, { marginBottom: 1 },
+            h(Text, { color: colors.success, bold: true }, `${icons.check} Ready to save!`)
+          ),
+          h(Box, null,
+            h(Text, { color: colors.textDim }, 'Press '),
+            h(Text, { color: colors.accent }, 'Enter'),
+            h(Text, { color: colors.textDim }, ' to confirm')
+          ),
+          h(TextInput, { value: '', onChange: () => {}, onSubmit: handleEditConfirm })
         )
       )
     );
@@ -169,18 +306,12 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
 
   // View mode
   const actionItems = [
-    { label: `${icons.edit}  Edit value`, value: 'edit' },
+    { label: `${icons.edit}  Edit`, value: 'edit' },
     { label: `${icons.delete}  Delete`, value: 'delete' },
     { label: `${icons.back}  Back to list`, value: 'back' }
   ];
 
   return h(Box, { flexDirection: 'column' },
-    // Title
-    h(Box, { marginBottom: 1 },
-      h(Text, { bold: true, color: colors.primary }, `${icons.key} `),
-      h(Text, { bold: true, color: colors.accent }, data.key)
-    ),
-
     // Info card
     h(Box, {
       flexDirection: 'column',
@@ -191,28 +322,27 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
       marginBottom: 1
     },
       h(InfoRow, {
-        icon: icons.value,
+        label: 'Key:',
+        children: h(Text, { color: colors.accent, bold: true }, data.key)
+      }),
+
+      h(InfoRow, {
         label: 'Value:',
         value: displayValue
       }),
 
       data.description && h(InfoRow, {
-        icon: icons.description,
         label: 'Desc:',
         value: data.description
       }),
 
-      h(Box, { marginTop: data.description ? 0 : 0 },
-        h(Box, { width: 14 },
-          h(Text, { color: colors.textDim }, `${icons.tags} `),
-          h(Text, { color: colors.textMuted, bold: true }, 'Tags:')
-        ),
-        h(TagBadges, { tags: data.tags })
-      ),
+      h(InfoRow, {
+        label: 'Tags:',
+        children: h(TagBadges, { tags: data.tags })
+      }),
 
       data.created_at && h(Box, { marginTop: 1 },
         h(InfoRow, {
-          icon: icons.time,
           label: 'Created:',
           value: new Date(data.created_at).toLocaleString(),
           valueColor: colors.textMuted

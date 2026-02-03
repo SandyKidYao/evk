@@ -39,6 +39,7 @@ const {
   removeVariable,
   getVariable,
   getVariableById,
+  updateVariableById,
   getAllVariables,
   getAllTags,
   getVariablesByKeys,
@@ -359,6 +360,89 @@ describe('Store Module', () => {
       const result = getVariableById('nonexistent');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('updateVariableById', () => {
+    test('should update variable fields by id', () => {
+      const existingVar = {
+        id: 'id1',
+        key: 'OLD_KEY',
+        value: 'old-value',
+        tags: ['dev'],
+        description: 'old desc',
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z'
+      };
+      const mockStore = { version: 2, vars: [existingVar] };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = updateVariableById('id1', {
+        key: 'NEW_KEY',
+        value: 'new-value',
+        tags: ['prod'],
+        description: 'new desc'
+      });
+
+      expect(result.id).toBe('id1');
+      expect(result.key).toBe('NEW_KEY');
+      expect(result.value).toBe('new-value');
+      expect(result.tags).toEqual(['prod']);
+      expect(result.description).toBe('new desc');
+      expect(result.created_at).toBe('2023-01-01T00:00:00.000Z');
+      expect(result.updated_at).not.toBe('2023-01-01T00:00:00.000Z');
+    });
+
+    test('should only update specified fields', () => {
+      const existingVar = {
+        id: 'id1',
+        key: 'API_KEY',
+        value: 'old-value',
+        tags: ['dev'],
+        description: 'desc',
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z'
+      };
+      const mockStore = { version: 2, vars: [existingVar] };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = updateVariableById('id1', { value: 'new-value' });
+
+      expect(result.key).toBe('API_KEY');
+      expect(result.value).toBe('new-value');
+      expect(result.tags).toEqual(['dev']);
+      expect(result.description).toBe('desc');
+    });
+
+    test('should return null when id does not exist', () => {
+      const mockStore = { version: 2, vars: [] };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = updateVariableById('nonexistent', { value: 'test' });
+
+      expect(result).toBeNull();
+    });
+
+    test('should normalize tags when updating', () => {
+      const existingVar = {
+        id: 'id1',
+        key: 'API_KEY',
+        value: 'value',
+        tags: [],
+        description: '',
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z'
+      };
+      const mockStore = { version: 2, vars: [existingVar] };
+      fsMock.default.existsSync.mockReturnValue(true);
+      fsMock.default.readFileSync.mockReturnValue(YAML.stringify(mockStore));
+
+      const result = updateVariableById('id1', { tags: ['prod', 'api', 'prod'] });
+
+      expect(result.tags).toEqual(['api', 'prod']);
     });
   });
 

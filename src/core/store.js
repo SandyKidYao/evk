@@ -239,6 +239,32 @@ export function getVariableById(id) {
 }
 
 /**
+ * Update a variable by ID (preserves ID and created_at)
+ * @param {string} id - Variable UUID
+ * @param {object} updates - Fields to update (key, value, tags, description)
+ * @returns {object|null} The updated variable entry or null if not found
+ */
+export function updateVariableById(id, updates) {
+  const store = readStore();
+  const entry = store.vars.find(v => v.id === id);
+
+  if (!entry) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+
+  if (updates.key !== undefined) entry.key = updates.key;
+  if (updates.value !== undefined) entry.value = updates.value;
+  if (updates.tags !== undefined) entry.tags = normalizeTags(updates.tags);
+  if (updates.description !== undefined) entry.description = updates.description;
+  entry.updated_at = now;
+
+  writeStore(store);
+  return entry;
+}
+
+/**
  * Get variable(s) by key
  * @param {string} key - Variable name
  * @param {object} options - Options: { tags: [...] } for exact match
