@@ -87,7 +87,7 @@ export default function AddView({ onBack, onCancel, showMessage, setFooterHints 
   };
 
   // Input field component
-  const InputField = ({ label, fieldValue, isActive, onChange, onSubmit, placeholder }) =>
+  const InputField = ({ label, fieldValue, isActive, onChange, onSubmit }) =>
     h(Box, { marginBottom: 1 },
       h(Box, { width: 16 },
         h(Text, { color: isActive ? colors.accent : colors.textDim, bold: isActive },
@@ -104,8 +104,7 @@ export default function AddView({ onBack, onCancel, showMessage, setFooterHints 
             h(TextInput, {
               value: fieldValue,
               onChange,
-              onSubmit,
-              placeholder
+              onSubmit
             })
           )
         : h(Text, { color: fieldValue ? colors.text : colors.textMuted },
@@ -137,8 +136,7 @@ export default function AddView({ onBack, onCancel, showMessage, setFooterHints 
         fieldValue: key,
         isActive: step === STEPS.KEY,
         onChange: setKey,
-        onSubmit: handleKeySubmit,
-        placeholder: 'API_KEY'
+        onSubmit: handleKeySubmit
       }),
 
       // Value field
@@ -147,8 +145,7 @@ export default function AddView({ onBack, onCancel, showMessage, setFooterHints 
         fieldValue: value,
         isActive: step === STEPS.VALUE,
         onChange: setValue,
-        onSubmit: handleValueSubmit,
-        placeholder: 'your-secret-value'
+        onSubmit: handleValueSubmit
       }),
 
       // Tags field
@@ -157,8 +154,7 @@ export default function AddView({ onBack, onCancel, showMessage, setFooterHints 
         fieldValue: tags,
         isActive: step === STEPS.TAGS,
         onChange: setTags,
-        onSubmit: handleTagsSubmit,
-        placeholder: 'prod, api (comma separated)'
+        onSubmit: handleTagsSubmit
       }),
 
       // Confirm
@@ -166,9 +162,11 @@ export default function AddView({ onBack, onCancel, showMessage, setFooterHints 
         h(Box, { marginBottom: 1 },
           h(Text, { color: colors.success, bold: true }, `${icons.check} Ready to add!`)
         ),
-        h(Text, { color: colors.textDim }, 'Press '),
-        h(Text, { color: colors.accent }, 'Enter'),
-        h(Text, { color: colors.textDim }, ' to confirm'),
+        h(Box, null,
+          h(Text, { color: colors.textDim }, 'Press '),
+          h(Text, { color: colors.accent }, 'Enter'),
+          h(Text, { color: colors.textDim }, ' to confirm')
+        ),
         h(TextInput, { value: '', onChange: () => {}, onSubmit: handleConfirm })
       )
     )
