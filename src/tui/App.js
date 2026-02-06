@@ -6,6 +6,7 @@ import AddView from './views/AddView.js';
 import SyncView from './views/SyncView.js';
 import DetailView from './views/DetailView.js';
 import CleanView from './views/CleanView.js';
+import ImportView from './views/ImportView.js';
 import Banner from './components/Banner.js';
 import { colors, icons } from './theme.js';
 
@@ -18,7 +19,8 @@ const VIEWS = {
   ADD: 'add',
   SYNC: 'sync',
   DETAIL: 'detail',
-  CLEAN: 'clean'
+  CLEAN: 'clean',
+  IMPORT: 'import'
 };
 
 export default function App() {
@@ -41,6 +43,7 @@ export default function App() {
   const goToAdd = () => setView(VIEWS.ADD);
   const goToSync = () => setView(VIEWS.SYNC);
   const goToClean = () => setView(VIEWS.CLEAN);
+  const goToImport = () => setView(VIEWS.IMPORT);
   const goToDetail = (id) => {
     setSelectedId(id);
     setView(VIEWS.DETAIL);
@@ -109,11 +112,12 @@ export default function App() {
         ),
 
     // Views
-    view === VIEWS.MENU && h(MainMenu, { onList: goToList, onAdd: goToAdd, onSync: goToSync, onClean: goToClean, onExit: exit }),
+    view === VIEWS.MENU && h(MainMenu, { onList: goToList, onAdd: goToAdd, onSync: goToSync, onImport: goToImport, onClean: goToClean, onExit: exit }),
     view === VIEWS.LIST && h(ListView, { onBack: goToMenu, onSelect: goToDetail, onAdd: goToAdd, showMessage, setFooterHints: updateFooterHints }),
     view === VIEWS.ADD && h(AddView, { onBack: goToList, onCancel: goToMenu, showMessage, setFooterHints: updateFooterHints }),
     view === VIEWS.SYNC && h(SyncView, { onBack: goToMenu, showMessage, setFooterHints: updateFooterHints }),
     view === VIEWS.CLEAN && h(CleanView, { onBack: goToMenu, showMessage, setFooterHints: updateFooterHints }),
+    view === VIEWS.IMPORT && h(ImportView, { onBack: goToMenu, showMessage, setFooterHints: updateFooterHints }),
     view === VIEWS.DETAIL && h(DetailView, { varId: selectedId, onBack: goToList, showMessage, setFooterHints: updateFooterHints }),
 
     // Footer - shows message, hints, or navigation

@@ -5,10 +5,11 @@ import { colors, icons } from '../theme.js';
 
 const { createElement: h } = React;
 
-export default function MainMenu({ onList, onAdd, onSync, onClean, onExit }) {
+export default function MainMenu({ onList, onAdd, onSync, onImport, onClean, onExit }) {
   const items = [
     { label: `${icons.list}  List variables`, value: 'list' },
     { label: `${icons.add}  Add variable`, value: 'add' },
+    { label: `${icons.import}  Import from file`, value: 'import' },
     { label: `${icons.sync}  Sync to files`, value: 'sync' },
     { label: `${icons.clean}  Clean from files`, value: 'clean' },
     { label: `${icons.exit}  Exit`, value: 'exit' }
@@ -18,6 +19,7 @@ export default function MainMenu({ onList, onAdd, onSync, onClean, onExit }) {
     switch (item.value) {
       case 'list': onList(); break;
       case 'add': onAdd(); break;
+      case 'import': onImport(); break;
       case 'sync': onSync(); break;
       case 'clean': onClean(); break;
       case 'exit': onExit(); break;

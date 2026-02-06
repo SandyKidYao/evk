@@ -20,6 +20,7 @@ A local-first environment variable keeper for developers.
 - Non-destructive updates with managed blocks
 - Conflict detection: automatically comments out existing variables
 - Clean command restores previously commented variables
+- Import variables from existing `.env` or shell config files
 - Interactive TUI mode for easy management
 - Tag-based organization
 
@@ -63,6 +64,12 @@ evk sync -e                 # Sync to ./.env
 evk sync API_KEY DB_URL -z  # Sync specific keys to ~/.zshrc
 evk sync --file ~/custom    # Sync to custom file path
 
+# Import variables from a file
+evk import .env                 # Import from .env file
+evk import ~/.zshrc -t shell    # Import with tags
+evk import config.env --dry-run # Preview without saving
+evk import .env --force         # Overwrite existing variables
+
 # Clean managed blocks from files
 evk clean -z                # Clean ~/.zshrc
 evk clean -b                # Clean ~/.bashrc
@@ -91,6 +98,7 @@ The TUI provides:
 - List view with variable details
 - Add new variables
 - Edit existing variables
+- Import variables from files
 - Sync to custom paths
 - Clean files with restore preview
 

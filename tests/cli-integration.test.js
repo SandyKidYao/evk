@@ -483,6 +483,271 @@ describe('CLI Integration Tests', () => {
     });
   });
 
+  describe('import command', () => {
+    test('imports from a .env file', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'source.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      // Create source file
+      fs.writeFileSync(sourceFile, 'IMPORT_VAR1=value1\nIMPORT_VAR2=value2\n');
+
+      // Import
+      const result = runCLI(`import "${sourceFile}"`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Imported 2');
+
+      // Verify variables were added
+      const listResult = runCLI('list -f json', env);
+      const vars = JSON.parse(listResult.stdout);
+      expect(vars.find(v => v.key === 'IMPORT_VAR1').value).toBe('value1');
+      expect(vars.find(v => v.key === 'IMPORT_VAR2').value).toBe('value2');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('imports from a shell file', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'source.sh');
+      const env = { EVK_STORE_PATH: importStore };
+
+      // Create shell source file
+      fs.writeFileSync(sourceFile, 'export SHELL_VAR1="hello"\nexport SHELL_VAR2="world"\n');
+
+      const result = runCLI(`import "${sourceFile}"`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Imported 2');
+
+      const listResult = runCLI('list -f json', env);
+      const vars = JSON.parse(listResult.stdout);
+      expect(vars.find(v => v.key === 'SHELL_VAR1').value).toBe('hello');
+      expect(vars.find(v => v.key === 'SHELL_VAR2').value).toBe('world');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('applies tags to imported variables', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'tagged.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      fs.writeFileSync(sourceFile, 'TAGGED_VAR=tagvalue\n');
+
+      const result = runCLI(`import "${sourceFile}" -t dev,staging`, env);
+      expect(result.exitCode).toBe(0);
+
+      const listResult = runCLI('list -f json', env);
+      const vars = JSON.parse(listResult.stdout);
+      const imported = vars.find(v => v.key === 'TAGGED_VAR');
+      expect(imported.tags).toContain('dev');
+      expect(imported.tags).toContain('staging');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('skips existing variables by default', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'conflict.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      // Add existing variable
+      runCLI('add CONFLICT_VAR original_value', env);
+
+      // Try to import same key
+      fs.writeFileSync(sourceFile, 'CONFLICT_VAR=new_value\nNEW_VAR=fresh\n');
+      const result = runCLI(`import "${sourceFile}"`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Skipped 1');
+      expect(result.stdout).toContain('CONFLICT_VAR');
+
+      // Verify existing value unchanged
+      const getResult = runCLI('get CONFLICT_VAR', env);
+      expect(getResult.stdout.trim()).toBe('original_value');
+
+      // New variable should be imported
+      const getNewResult = runCLI('get NEW_VAR', env);
+      expect(getNewResult.stdout.trim()).toBe('fresh');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('--force overwrites existing variables', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'force.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      // Add existing variable
+      runCLI('add FORCE_VAR original', env);
+
+      // Force import
+      fs.writeFileSync(sourceFile, 'FORCE_VAR=overwritten\n');
+      const result = runCLI(`import "${sourceFile}" --force`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Updated 1');
+
+      // Verify value was overwritten
+      const getResult = runCLI('get FORCE_VAR', env);
+      expect(getResult.stdout.trim()).toBe('overwritten');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('--dry-run shows preview without saving', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'dryrun.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      fs.writeFileSync(sourceFile, 'DRY_VAR=dryvalue\n');
+
+      const result = runCLI(`import "${sourceFile}" --dry-run`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Dry run');
+      expect(result.stdout).toContain('DRY_VAR');
+
+      // Verify nothing was saved
+      const listResult = runCLI('list', env);
+      expect(listResult.stdout).toContain('No variables found');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('handles empty file gracefully', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'empty.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      fs.writeFileSync(sourceFile, '# Only comments\n\n');
+
+      const result = runCLI(`import "${sourceFile}"`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('No variables found');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('handles nonexistent file with error', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const env = { EVK_STORE_PATH: importStore };
+
+      const result = runCLI(`import "/nonexistent/path/.env"`, env);
+      expect(result.exitCode).not.toBe(0);
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('imports with -e shortcut flag', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const envFile = path.join(importDir, '.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      fs.writeFileSync(envFile, 'SHORTCUT_VAR=shortcut\n');
+
+      const result = runCLI(`import -e "${envFile}"`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Imported 1');
+
+      const getResult = runCLI('get SHORTCUT_VAR', env);
+      expect(getResult.stdout.trim()).toBe('shortcut');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('treats same-value variables as unchanged', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'unchanged.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      // Add existing variable with same value
+      runCLI('add SAME_VAR samevalue', env);
+
+      // Import file with same key and same value, plus a new one
+      fs.writeFileSync(sourceFile, 'SAME_VAR=samevalue\nBRAND_NEW=fresh\n');
+      const result = runCLI(`import "${sourceFile}"`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Imported 1');
+      expect(result.stdout).toContain('1 unchanged');
+      // Should NOT contain "Skipped" since it's unchanged, not a conflict
+      expect(result.stdout).not.toContain('Skipped');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('requires source argument or shortcut flag', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const env = { EVK_STORE_PATH: importStore };
+
+      const result = runCLI('import', env);
+      expect(result.exitCode).not.toBe(0);
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('no conflict when importing without tags and existing has tags', () => {
+      const importDir = createTempDir();
+      const importStore = path.join(importDir, 'store.yaml');
+      const sourceFile = path.join(importDir, 'cross-tag.env');
+      const env = { EVK_STORE_PATH: importStore };
+
+      // Add existing variable with 'dev' tag
+      runCLI('add API_KEY dev-secret -t dev', env);
+
+      // Import same key without tags — should NOT conflict (different tag scope)
+      fs.writeFileSync(sourceFile, 'API_KEY=untagged-secret\n');
+      const result = runCLI(`import "${sourceFile}"`, env);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Imported 1');
+      expect(result.stdout).not.toContain('Skipped');
+
+      // Both entries should exist
+      const listResult = runCLI('list -f json', env);
+      const vars = JSON.parse(listResult.stdout);
+      const apiKeys = vars.filter(v => v.key === 'API_KEY');
+      expect(apiKeys).toHaveLength(2);
+      expect(apiKeys.find(v => v.tags.includes('dev')).value).toBe('dev-secret');
+      expect(apiKeys.find(v => v.tags.length === 0).value).toBe('untagged-secret');
+
+      fs.rmSync(importDir, { recursive: true, force: true });
+    });
+
+    test('sync then import round-trip', () => {
+      const rtDir = createTempDir();
+      const rtStore1 = path.join(rtDir, 'store1.yaml');
+      const rtStore2 = path.join(rtDir, 'store2.yaml');
+      const rtFile = path.join(rtDir, 'roundtrip.env');
+      const env1 = { EVK_STORE_PATH: rtStore1 };
+      const env2 = { EVK_STORE_PATH: rtStore2 };
+
+      // Add variables to store1 and sync to file
+      runCLI('add RT_VAR1 rtvalue1 -t roundtrip', env1);
+      runCLI('add RT_VAR2 rtvalue2 -t roundtrip', env1);
+      runCLI(`sync -t roundtrip --file "${rtFile}"`, env1);
+
+      // Import from that file into store2
+      const result = runCLI(`import "${rtFile}" -t imported`, env2);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Imported 2');
+
+      // Verify values match
+      const get1 = runCLI('get RT_VAR1 -t imported', env2);
+      expect(get1.stdout.trim()).toBe('rtvalue1');
+      const get2 = runCLI('get RT_VAR2 -t imported', env2);
+      expect(get2.stdout.trim()).toBe('rtvalue2');
+
+      fs.rmSync(rtDir, { recursive: true, force: true });
+    });
+  });
+
   describe('Full workflow integration', () => {
     test('complete workflow: add -> list -> show -> sync -> clean -> remove', () => {
       const workflowDir = createTempDir();

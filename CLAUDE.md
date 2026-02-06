@@ -34,12 +34,14 @@ evk/
 │   │   ├── remove.js    # Remove variables
 │   │   ├── show.js      # Show/get variable details
 │   │   ├── sync.js      # Sync to target files
+│   │   ├── import.js    # Import from files
 │   │   ├── clean.js     # Clean managed blocks
 │   │   ├── export.js    # Export for eval
 │   │   └── purge.js     # Delete all evk data
 │   ├── core/
 │   │   ├── store.js     # YAML store operations
-│   │   └── sync.js      # Sync logic with conflict detection
+│   │   ├── sync.js      # Sync logic with conflict detection
+│   │   └── import.js    # Import logic (parse file, detect conflicts)
 │   ├── tui/
 │   │   ├── index.js     # TUI entry point (startTUI)
 │   │   ├── App.js       # Main app with view state management
@@ -57,6 +59,7 @@ evk/
 - **src/commands/** - Individual command implementations, each exporting a handler function
 - **src/core/store.js** - YAML store operations (`~/.evk/store.yaml`). Handles reading/writing with 0600 permissions for security
 - **src/core/sync.js** - Syncs variables to target files (shell configs, .env). Manages "evk Managed Block" markers and handles conflict detection by commenting out existing variables
+- **src/core/import.js** - Imports variables from files (.env, shell configs) into the store. Parses file content, detects conflicts with existing store entries, and executes batch imports
 - **src/utils/parser.js** - Block parsing/generation. Defines `BLOCK_START`/`BLOCK_END` markers, detects file types (shell vs dotenv), formats export statements
 - **src/utils/file.js** - Safe file I/O with `~` expansion
 - **src/utils/logger.js** - Console output helpers with chalk (success, error, warn, info, dim)
@@ -66,8 +69,8 @@ evk/
 Built with React + Ink. Located in `src/tui/`:
 
 - **index.js** - Entry point, exports `startTUI()` function
-- **App.js** - Main app with view state management (MENU, LIST, ADD, SYNC, DETAIL, CLEAN)
-- **views/** - Individual view components (MainMenu, ListView, AddView, SyncView, DetailView, CleanView)
+- **App.js** - Main app with view state management (MENU, LIST, ADD, SYNC, IMPORT, DETAIL, CLEAN)
+- **views/** - Individual view components (MainMenu, ListView, AddView, SyncView, ImportView, DetailView, CleanView)
 
 Uses `React.createElement` directly (aliased as `h`) rather than JSX.
 

@@ -28,6 +28,7 @@ export const icons = {
   list: '📋',
   add: '➕',
   sync: '🔄',
+  import: '📥',
   clean: '🧹',
   exit: '🚪',
 

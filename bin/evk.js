@@ -10,6 +10,7 @@ import { exportCommand } from '../src/commands/export.js';
 import { showCommand, getCommand } from '../src/commands/show.js';
 import { purgeCommand } from '../src/commands/purge.js';
 import { tagsCommand } from '../src/commands/tags.js';
+import { importCommand } from '../src/commands/import.js';
 import { startTUI } from '../src/tui/index.js';
 
 const program = new Command();
@@ -97,6 +98,18 @@ program
   .description('List all available tags')
   .option('-f, --format <format>', 'Output format (list|json)', 'list')
   .action(tagsCommand);
+
+// import command
+program
+  .command('import [source]')
+  .description('Import variables from a file (.env, .zshrc, .bashrc, etc.)')
+  .option('-z, --zsh', 'Import from ~/.zshrc')
+  .option('-b, --bash', 'Import from ~/.bashrc')
+  .option('-e, --env [path]', 'Import from .env file (default: ./.env)')
+  .option('-t, --tags <tags>', 'Tags to apply to imported variables (comma-separated)')
+  .option('--force', 'Overwrite existing variables on conflict')
+  .option('--dry-run', 'Preview import without saving')
+  .action(importCommand);
 
 // ui command (explicit)
 program
