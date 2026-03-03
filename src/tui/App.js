@@ -11,7 +11,7 @@ import Banner from './components/Banner.js';
 import { colors, icons } from './theme.js';
 
 const { createElement: h } = React;
-const VERSION = '0.5.0';
+const VERSION = '0.7.0';
 
 const VIEWS = {
   MENU: 'menu',
