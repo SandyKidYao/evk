@@ -11,7 +11,6 @@ import Banner from './components/Banner.js';
 import { colors, icons } from './theme.js';
 
 const { createElement: h } = React;
-const VERSION = '0.7.0';
 
 const VIEWS = {
   MENU: 'menu',
@@ -23,7 +22,7 @@ const VIEWS = {
   IMPORT: 'import'
 };
 
-export default function App() {
+export default function App({ version }) {
   const { exit } = useApp();
   const [view, setView] = useState(VIEWS.MENU);
   const [selectedId, setSelectedId] = useState(null);
@@ -105,7 +104,7 @@ export default function App() {
   return h(Box, { flexDirection: 'column', padding: 1 },
     // Header - Show Banner on main menu, simple header on other views
     view === VIEWS.MENU
-      ? h(Banner, { version: VERSION })
+      ? h(Banner, { version })
       : h(Box, { marginBottom: 1 },
           h(Text, { bold: true, color: colors.primary }, `${icons.lock} evk`),
           h(Text, { color: colors.textDim }, ' - Environment Variable Keeper')

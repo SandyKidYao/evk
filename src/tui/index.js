@@ -3,12 +3,12 @@ import { render } from 'ink';
 import App from './App.js';
 import { storeExists, initStore } from '../core/store.js';
 
-export function startTUI() {
+export function startTUI(version) {
   // Auto-init if not exists
   if (!storeExists()) {
     initStore();
     console.log('✓ Initialized evk\n');
   }
 
-  render(React.createElement(App));
+  render(React.createElement(App, { version }));
 }

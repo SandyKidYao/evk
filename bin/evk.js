@@ -26,7 +26,7 @@ program
   .version(pkg.version)
   .action(() => {
     // Default action: start interactive TUI
-    startTUI();
+    startTUI(pkg.version);
   });
 
 // add command
