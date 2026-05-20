@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
 import { addCommand } from '../src/commands/add.js';
 import { listCommand } from '../src/commands/list.js';
@@ -13,12 +14,16 @@ import { tagsCommand } from '../src/commands/tags.js';
 import { importCommand } from '../src/commands/import.js';
 import { startTUI } from '../src/tui/index.js';
 
+const pkg = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+);
+
 const program = new Command();
 
 program
   .name('evk')
   .description('A local-first environment variable keeper for developers')
-  .version('0.1.0')
+  .version(pkg.version)
   .action(() => {
     // Default action: start interactive TUI
     startTUI();
