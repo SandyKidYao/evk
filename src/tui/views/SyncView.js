@@ -9,6 +9,8 @@ import { getAllVariables, getAllTags, flattenVariables } from '../../core/store.
 import { syncToFile } from '../../core/sync.js';
 import { expandPath } from '../../utils/file.js';
 import { colors, icons, getTagColor } from '../theme.js';
+import useTerminalSize from '../hooks/useTerminalSize.js';
+import { getTableLayout, truncate } from '../layout.js';
 
 const { createElement: h } = React;
 
@@ -24,13 +26,9 @@ function TagBadge({ tag }) {
   return h(Text, { color: getTagColor(tag) }, ` ${tag} `);
 }
 
-// Truncate value for display
-function truncateValue(value, maxLen = 18) {
-  if (value.length <= maxLen) return value;
-  return value.slice(0, maxLen - 3) + '...';
-}
-
 export default function SyncView({ onBack, showMessage, setFooterHints }) {
+  const { columns } = useTerminalSize();
+  const { keyWidth, valueWidth } = getTableLayout(columns);
   const [vars, setVars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -243,7 +241,8 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
         h(Box, {
           borderStyle: 'round',
           borderColor: colors.border,
-          paddingX: 1
+          paddingX: 1,
+          alignSelf: 'stretch'
         },
           h(TextInput, {
             value: customPath,
@@ -312,17 +311,17 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
   const itemComponent = ({ isSelected, data }) => {
     if (!data) return h(Text, null, '(unknown)');
 
-    const valueDisplay = truncateValue(data.value);
+    const valueDisplay = truncate(data.value, valueWidth - 2);
     const sortedTags = (data.tags || []).slice().sort();
 
     return h(Box, { width: '100%' },
-      h(Box, { width: 20 },
+      h(Box, { width: keyWidth },
         h(Text, {
           color: isSelected ? colors.accent : colors.text,
           bold: isSelected
-        }, data.key)
+        }, truncate(data.key, keyWidth - 2))
       ),
-      h(Box, { width: 22 },
+      h(Box, { width: valueWidth },
         h(Text, {
           color: isSelected ? colors.primaryLight : colors.textDim
         }, valueDisplay)
@@ -348,10 +347,10 @@ export default function SyncView({ onBack, showMessage, setFooterHints }) {
       borderColor: colors.border,
       paddingX: 1
     },
-      // Header row
-      h(Box, { marginBottom: 1, paddingX: 1 },
-        h(Text, { color: colors.textMuted, bold: true }, '  KEY'.padEnd(22)),
-        h(Text, { color: colors.textMuted, bold: true }, 'VALUE'.padEnd(22)),
+      // Header row - widths mirror the item rows (indicator + key + value)
+      h(Box, { marginBottom: 1 },
+        h(Text, { color: colors.textMuted, bold: true }, '  KEY'.padEnd(keyWidth + 2)),
+        h(Text, { color: colors.textMuted, bold: true }, 'VALUE'.padEnd(valueWidth)),
         h(Text, { color: colors.textMuted, bold: true }, 'TAGS')
       ),
       h(SelectInput, {

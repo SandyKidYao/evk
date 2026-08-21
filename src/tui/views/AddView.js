@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { addVariable } from '../../core/store.js';
 import { colors, icons } from '../theme.js';
+import InputField from '../components/InputField.js';
 
 const { createElement: h } = React;
 
@@ -85,32 +86,6 @@ export default function AddView({ onBack, onCancel, showMessage, setFooterHints 
       showMessage(err.message, 'error');
     }
   };
-
-  // Input field component
-  const InputField = ({ label, fieldValue, isActive, onChange, onSubmit }) =>
-    h(Box, { marginBottom: 1 },
-      h(Box, { width: 16 },
-        h(Text, { color: isActive ? colors.accent : colors.textDim, bold: isActive },
-          `${isActive ? icons.arrow : ' '} ${label}: `
-        )
-      ),
-      isActive
-        ? h(Box, {
-            borderStyle: 'round',
-            borderColor: colors.accent,
-            paddingX: 1,
-            minWidth: 30
-          },
-            h(TextInput, {
-              value: fieldValue,
-              onChange,
-              onSubmit
-            })
-          )
-        : h(Text, { color: fieldValue ? colors.text : colors.textMuted },
-            fieldValue || '(empty)'
-          )
-    );
 
   return h(Box, { flexDirection: 'column' },
     // Title

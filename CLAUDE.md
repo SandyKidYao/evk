@@ -45,6 +45,10 @@ evk/
 │   ├── tui/
 │   │   ├── index.js     # TUI entry point (startTUI)
 │   │   ├── App.js       # Main app with view state management
+│   │   ├── theme.js     # Colors and icons
+│   │   ├── layout.js    # Responsive layout helpers (table column widths, truncation)
+│   │   ├── hooks/       # useTerminalSize (re-render on terminal resize)
+│   │   ├── components/  # Shared components (Banner, InputField)
 │   │   └── views/       # View components
 │   └── utils/
 │       ├── file.js      # Safe file I/O with ~ expansion
@@ -71,8 +75,13 @@ Built with React + Ink. Located in `src/tui/`:
 - **index.js** - Entry point, exports `startTUI()` function
 - **App.js** - Main app with view state management (MENU, LIST, ADD, SYNC, IMPORT, DETAIL, CLEAN)
 - **views/** - Individual view components (MainMenu, ListView, AddView, SyncView, ImportView, DetailView, CleanView)
+- **hooks/useTerminalSize.js** - Tracks terminal `columns`/`rows` and re-renders on resize
+- **layout.js** - `getTableLayout(columns)` computes KEY/VALUE/TAGS column widths; `truncate()` for ellipsis truncation
+- **components/InputField.js** - Shared step-form input row (AddView, DetailView edit mode); input box width follows terminal width
 
 Uses `React.createElement` directly (aliased as `h`) rather than JSX.
+
+Layouts are responsive: table column widths (ListView, SyncView, ImportView preview) and text input widths are derived from the current terminal width via `useTerminalSize`, not hardcoded.
 
 ### Data Structure (v2)
 

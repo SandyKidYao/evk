@@ -101,6 +101,7 @@ The TUI provides:
 - Import variables from files
 - Sync to custom paths
 - Clean files with restore preview
+- Responsive layout that adapts to terminal width and resizing
 
 ## Managed Blocks
 

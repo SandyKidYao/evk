@@ -9,6 +9,8 @@ import { ensureStore, addVariable, getVariable } from '../../core/store.js';
 import { parseVariablesFromFile } from '../../core/import.js';
 import { expandPath } from '../../utils/file.js';
 import { colors, icons, getTagColor } from '../theme.js';
+import useTerminalSize from '../hooks/useTerminalSize.js';
+import { truncate } from '../layout.js';
 
 const { createElement: h } = React;
 
@@ -19,13 +21,14 @@ const SOURCES = [
   { label: `${icons.edit} Custom path...`, value: 'custom', path: null }
 ];
 
-// Truncate value for display
-function truncateValue(value, maxLen = 24) {
-  if (value.length <= maxLen) return value;
-  return value.slice(0, maxLen - 3) + '...';
-}
-
 export default function ImportView({ onBack, showMessage, setFooterHints }) {
+  const { columns } = useTerminalSize();
+  // Preview rows: app padding (2) + border (2) + paddingX (4) + '+ ' prefix (2)
+  const previewUsable = Math.max(36, columns - 10);
+  const previewKeyWidth = Math.min(48, Math.max(12, Math.floor(previewUsable * 0.4)));
+  const previewValueMax = Math.max(16, previewUsable - previewKeyWidth);
+  // Conflict view: 'Current: ' label (9) + surrounding padding/borders
+  const conflictValueMax = Math.max(24, columns - 20);
   const [mode, setMode] = useState('selectSource'); // selectSource, custom, tagInput, preview, confirmConflict
   const [customPath, setCustomPath] = useState('');
   const [sourcePath, setSourcePath] = useState(null);
@@ -300,7 +303,8 @@ export default function ImportView({ onBack, showMessage, setFooterHints }) {
         h(Box, {
           borderStyle: 'round',
           borderColor: colors.border,
-          paddingX: 1
+          paddingX: 1,
+          alignSelf: 'stretch'
         },
           h(TextInput, {
             value: customPath,
@@ -333,7 +337,8 @@ export default function ImportView({ onBack, showMessage, setFooterHints }) {
         h(Box, {
           borderStyle: 'round',
           borderColor: colors.border,
-          paddingX: 1
+          paddingX: 1,
+          alignSelf: 'stretch'
         },
           h(TextInput, {
             value: tags,
@@ -369,11 +374,11 @@ export default function ImportView({ onBack, showMessage, setFooterHints }) {
           h(Text, { bold: true, color: colors.text }, conflict.key),
           h(Box, { marginTop: 1 },
             h(Text, { color: colors.textDim }, 'Current: '),
-            h(Text, { color: colors.error }, truncateValue(conflict.existing.value, 40))
+            h(Text, { color: colors.error }, truncate(conflict.existing.value, conflictValueMax))
           ),
           h(Box, null,
             h(Text, { color: colors.textDim }, 'New:     '),
-            h(Text, { color: colors.success }, truncateValue(conflict.value, 40))
+            h(Text, { color: colors.success }, truncate(conflict.value, conflictValueMax))
           )
         ),
         h(SelectInput, { items: conflictItems, onSelect: handleConflictDecision })
@@ -409,10 +414,10 @@ export default function ImportView({ onBack, showMessage, setFooterHints }) {
       ...toImport.map(({ key, value }) =>
         h(Box, { key: `new-${key}` },
           h(Text, { color: colors.success }, '+ '),
-          h(Box, { width: 24 },
-            h(Text, { color: colors.text }, key)
+          h(Box, { width: previewKeyWidth },
+            h(Text, { color: colors.text }, truncate(key, previewKeyWidth - 2))
           ),
-          h(Text, { color: colors.textDim }, truncateValue(value))
+          h(Text, { color: colors.textDim }, truncate(value, previewValueMax))
         )
       ),
 
@@ -424,11 +429,11 @@ export default function ImportView({ onBack, showMessage, setFooterHints }) {
           h(Text, { color: isOverwrite ? colors.warning : colors.textMuted },
             isOverwrite ? '~ ' : '- '
           ),
-          h(Box, { width: 24 },
-            h(Text, { color: isOverwrite ? colors.text : colors.textMuted }, key)
+          h(Box, { width: previewKeyWidth },
+            h(Text, { color: isOverwrite ? colors.text : colors.textMuted }, truncate(key, previewKeyWidth - 2))
           ),
           h(Text, { color: isOverwrite ? colors.warning : colors.textMuted },
-            isOverwrite ? truncateValue(value) : '(skipped)'
+            isOverwrite ? truncate(value, previewValueMax) : '(skipped)'
           )
         );
       }),
@@ -437,8 +442,8 @@ export default function ImportView({ onBack, showMessage, setFooterHints }) {
       ...unchanged.map(({ key, value }) =>
         h(Box, { key: `unchanged-${key}` },
           h(Text, { color: colors.textMuted }, '= '),
-          h(Box, { width: 24 },
-            h(Text, { color: colors.textMuted }, key)
+          h(Box, { width: previewKeyWidth },
+            h(Text, { color: colors.textMuted }, truncate(key, previewKeyWidth - 2))
           ),
           h(Text, { color: colors.textMuted }, '(unchanged)')
         )

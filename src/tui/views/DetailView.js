@@ -4,6 +4,7 @@ import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import { getVariableById, removeVariable, updateVariableById } from '../../core/store.js';
 import { colors, icons, getTagColor } from '../theme.js';
+import InputField from '../components/InputField.js';
 
 const EDIT_STEPS = { KEY: 0, VALUE: 1, TAGS: 2, CONFIRM: 3 };
 const EDIT_STEP_LABELS = ['Key', 'Value', 'Tags', 'Confirm'];
@@ -217,32 +218,6 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
 
   // Edit mode - multi-step form
   if (mode === 'edit') {
-    // Input field component for edit mode
-    const EditInputField = ({ label, fieldValue, isActive, onChange, onSubmit }) =>
-      h(Box, { marginBottom: 1 },
-        h(Box, { width: 16 },
-          h(Text, { color: isActive ? colors.accent : colors.textDim, bold: isActive },
-            `${isActive ? icons.arrow : ' '} ${label}: `
-          )
-        ),
-        isActive
-          ? h(Box, {
-              borderStyle: 'round',
-              borderColor: colors.accent,
-              paddingX: 1,
-              minWidth: 30
-            },
-              h(TextInput, {
-                value: fieldValue,
-                onChange,
-                onSubmit
-              })
-            )
-          : h(Text, { color: fieldValue ? colors.text : colors.textMuted },
-              fieldValue || '(empty)'
-            )
-      );
-
     return h(Box, { flexDirection: 'column' },
       // Title
       h(Box, { marginBottom: 1 },
@@ -262,7 +237,7 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
         marginBottom: 1
       },
         // Key field
-        h(EditInputField, {
+        h(InputField, {
           label: 'Key',
           fieldValue: editKey,
           isActive: editStep === EDIT_STEPS.KEY,
@@ -271,7 +246,7 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
         }),
 
         // Value field
-        editStep >= EDIT_STEPS.VALUE && h(EditInputField, {
+        editStep >= EDIT_STEPS.VALUE && h(InputField, {
           label: 'Value',
           fieldValue: editValue,
           isActive: editStep === EDIT_STEPS.VALUE,
@@ -280,7 +255,7 @@ export default function DetailView({ varId, onBack, showMessage, setFooterHints 
         }),
 
         // Tags field
-        editStep >= EDIT_STEPS.TAGS && h(EditInputField, {
+        editStep >= EDIT_STEPS.TAGS && h(InputField, {
           label: 'Tags',
           fieldValue: editTags,
           isActive: editStep === EDIT_STEPS.TAGS,
