@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-19T07:20:47Z",
+  "title": "Design System: evk",
+  "extensions": {
+    "platform": "terminal (Ink/React TUI). No fonts, CSS, radii, shadows, motion tokens or breakpoints exist; the terminal owns typeface, size and background. Main text uses the terminal foreground (no hex). Tonal ramps are omitted on purpose: the source defines exactly one value per role per scheme. Component previews paint #15171A / #F8F6F1 canvases with #D8DADF / #1E1F22 text and a monospace face only to stand in for a user's terminal; those are not evk tokens.",
+    "schemeSelection": "EVK_COLOR_SCHEME=light|dark, else COLORFGBG (background index < 8 = dark), else dark",
+    "colorMeta": {
+      "accent-dark": { "role": "primary", "displayName": "Desk Amber (dark)", "canonical": "#F0C674", "source": "src/tui/theme.js darkColors.accent" },
+      "accent-light": { "role": "primary", "displayName": "Desk Amber (light)", "canonical": "#8A5A00", "source": "src/tui/theme.js lightColors.accent" },
+      "accent-fg-dark": { "role": "primary", "displayName": "Ink on Amber (dark)", "canonical": "#15171A", "source": "darkColors.accentFg" },
+      "accent-fg-light": { "role": "primary", "displayName": "Ink on Amber (light)", "canonical": "#F8F6F1", "source": "lightColors.accentFg" },
+      "ok-dark": { "role": "secondary", "displayName": "Current Green (dark)", "canonical": "#98C379", "source": "darkColors.ok" },
+      "ok-light": { "role": "secondary", "displayName": "Current Green (light)", "canonical": "#2D7A31", "source": "lightColors.ok" },
+      "stale-dark": { "role": "secondary", "displayName": "Stale Amber (dark)", "canonical": "#E5A54B", "source": "darkColors.stale" },
+      "stale-light": { "role": "secondary", "displayName": "Stale Amber (light)", "canonical": "#B4470F", "source": "lightColors.stale" },
+      "bad-dark": { "role": "secondary", "displayName": "Removal Red (dark)", "canonical": "#EF7B72", "source": "darkColors.bad" },
+      "bad-light": { "role": "secondary", "displayName": "Removal Red (light)", "canonical": "#B3261E", "source": "lightColors.bad" },
+      "tag-dev-dark": { "role": "tertiary", "displayName": "Tag dev (dark)", "canonical": "#86B6E0" },
+      "tag-staging-dark": { "role": "tertiary", "displayName": "Tag staging (dark)", "canonical": "#BFA6E6" },
+      "tag-prod-dark": { "role": "tertiary", "displayName": "Tag prod (dark)", "canonical": "#E0A487" },
+      "tag-cycle-1-dark": { "role": "tertiary", "displayName": "Tag cycle 1 (dark)", "canonical": "#A9C2A0" },
+      "tag-cycle-2-dark": { "role": "tertiary", "displayName": "Tag cycle 2 (dark)", "canonical": "#D7B98A" },
+      "tag-cycle-3-dark": { "role": "tertiary", "displayName": "Tag cycle 3 (dark)", "canonical": "#9FC3C9" },
+      "tag-cycle-4-dark": { "role": "tertiary", "displayName": "Tag cycle 4 (dark)", "canonical": "#C9A9C2" },
+      "tag-dev-light": { "role": "tertiary", "displayName": "Tag dev (light)", "canonical": "#1F5F99" },
+      "tag-staging-light": { "role": "tertiary", "displayName": "Tag staging (light)", "canonical": "#6A3FB0" },
+      "tag-prod-light": { "role": "tertiary", "displayName": "Tag prod (light)", "canonical": "#A3461C" },
+      "tag-cycle-1-light": { "role": "tertiary", "displayName": "Tag cycle 1 (light)", "canonical": "#3F6B34" },
+      "tag-cycle-2-light": { "role": "tertiary", "displayName": "Tag cycle 2 (light)", "canonical": "#7A5A12" },
+      "tag-cycle-3-light": { "role": "tertiary", "displayName": "Tag cycle 3 (light)", "canonical": "#1F6B73" },
+      "tag-cycle-4-light": { "role": "tertiary", "displayName": "Tag cycle 4 (light)", "canonical": "#7A3F6B" },
+      "dim-dark": { "role": "neutral", "displayName": "Dim (dark)", "canonical": "#A3A8B0" },
+      "dim-light": { "role": "neutral", "displayName": "Dim (light)", "canonical": "#4F555D" },
+      "muted-dark": { "role": "neutral", "displayName": "Muted (dark)", "canonical": "#7F858E" },
+      "muted-light": { "role": "neutral", "displayName": "Muted (light)", "canonical": "#6B7179" },
+      "rule-dark": { "role": "neutral", "displayName": "Rule (dark)", "canonical": "#3A3F46" },
+      "rule-light": { "role": "neutral", "displayName": "Rule (light)", "canonical": "#C9C3B6" },
+      "sel-bg-dark": { "role": "neutral", "displayName": "Selection (dark)", "canonical": "#262A31" },
+      "sel-bg-light": { "role": "neutral", "displayName": "Selection (light)", "canonical": "#E8E2D4" }
+    },
+    "glyphs": {
+      "cells": { "ok": " ● ", "stale": " ◐ ", "none": " · ", "untracked": " ○ ", "add": "[+]", "remove": "[-]", "update": "[~]" },
+      "ui": { "pointer": "›", "rule": "─", "ok": "✓", "warn": "!", "err": "✗", "info": "·", "more": "…" },
+      "other": { "columnOverflowLeft": "‹", "columnOverflowRight": "›", "rowScroll": "↑ ↓", "diffAdd": "+", "diffRemove": "-", "diffCommented": "#", "diffRestored": "↺", "importChecked": "[x]", "importUnchecked": "[ ]", "maskDots": "••••••••", "urlMask": "••••••" },
+      "source": "src/tui/theme.js cells/glyphs; App.js; DiffPreview.js; ImportPanel.js; src/utils/mask.js"
+    },
+    "layout": {
+      "units": "ch = terminal columns, lh = terminal lines",
+      "contentWidth": "max(40, columns - 2), paddingX 1",
+      "bodyHeight": "max(8, rows - 6)",
+      "lineAnatomy": ["header (evk · mode, counts; filter on the right)", "rule", "column header", "grid", "rule with row-position label (↑ a–b of n ↓)", "info panel (4 lines: queued, selected, context, legend) or entry form (7 lines)", "rule", "hint line", "status line"],
+      "labelWidth": "2 (pointer gutter) + keyWidth + 1 + tagWidth + 1",
+      "keyWidth": "longest key clamped 10–28; shrinks to 8 if a 12-column cell would not fit",
+      "tagWidth": "longest tag label clamped 4–14",
+      "cell": "12 columns, 3-column glyph centred (4 before, 5 after)",
+      "visibleColumns": "floor((W - labelWidth - 2) / 12)",
+      "truncation": "fit() keeps the start + …; fitLeft() keeps the end (paths: …/api/.env); East Asian wide and emoji count 2 columns",
+      "importColumns": "pointer 2, checkbox 4, key 22, masked value 24 + 2, note = rest",
+      "formLabel": "14 columns",
+      "helpKeyColumn": "16 columns"
+    },
+    "motion": [
+      { "name": "reveal-timeout", "value": "5000ms", "purpose": "v reveals a value in clear; it hides again after 5 s." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Board row with cursor cell",
+      "kind": "custom",
+      "refersTo": "cell-cursor-dark",
+      "description": "Selected grid row (dark scheme): amber pointer and bold key on the selection background, tag in its hue, 12-column cells with centred glyphs; the cursor cell is inverse on Desk Amber. Preview canvas stands in for the user's terminal background and font.",
+      "html": "<div class=\"ds-term\"><div class=\"ds-row\"><span class=\"ds-gut\">  </span><span class=\"ds-key\">AWS_REGION                </span><span class=\"ds-tag\">     </span><span class=\"ds-cell ds-ok\">     ●      </span><span class=\"ds-cell ds-none\">     ·      </span></div><div class=\"ds-row ds-sel\"><span class=\"ds-gut ds-acc\">› </span><span class=\"ds-key ds-keyon\">GITHUB_TOKEN              </span><span class=\"ds-tag ds-dev\">dev  </span><span class=\"ds-cell ds-ok\">     ●      </span><span class=\"ds-cell\">    <b class=\"ds-cur\">[+]</b>     </span></div></div>",
+      "css": ".ds-term { background: #15171A; color: #D8DADF; font-family: monospace; white-space: pre; padding: 8px 1ch; } .ds-row { display: block; } .ds-sel { background: #262A31; } .ds-acc { color: #F0C674; } .ds-keyon { color: #F0C674; font-weight: 700; } .ds-dev { color: #86B6E0; } .ds-ok { color: #98C379; } .ds-none { color: #7F858E; } .ds-cur { background: #F0C674; color: #15171A; font-weight: 700; }"
+    },
+    {
+      "name": "Queued cells",
+      "kind": "chip",
+      "refersTo": "board-cell",
+      "description": "Queued marks, bold in their state colour, persist until a (apply with diff) or x (drop).",
+      "html": "<div class=\"ds-term\"><b class=\"ds-add\">[+]</b> add   <b class=\"ds-rem\">[-]</b> remove   <b class=\"ds-upd\">[~]</b> update   <span class=\"ds-ok\">●</span> current   <span class=\"ds-upd\">◐</span> stale   <span class=\"ds-mut\">·</span> not in file   <span class=\"ds-dim\">○</span> not in store</div>",
+      "css": ".ds-term { background: #15171A; color: #D8DADF; font-family: monospace; white-space: pre; padding: 8px 1ch; } .ds-add, .ds-ok { color: #98C379; } .ds-rem { color: #EF7B72; } .ds-upd { color: #E5A54B; } .ds-mut { color: #7F858E; } .ds-dim { color: #A3A8B0; }"
+    },
+    {
+      "name": "Info panel",
+      "kind": "card",
+      "refersTo": "info-panel",
+      "description": "Four lines under a rule: queued summary with the call to action, selected value masked, column context, legend.",
+      "html": "<div class=\"ds-term\"><div class=\"ds-rule\">────────────────────────────────────────────────────────</div><div><b class=\"ds-acc\">queued </b><span class=\"ds-acc\">→ a to preview &amp; write   </span><b>./.env </b><span class=\"ds-ok\">+1 </span><span class=\"ds-stale\">~1</span></div><div><b>GITHUB_TOKEN </b> <span class=\"ds-dim\">ghp_••••••••Uk2Q</span><span class=\"ds-mut\">   repo, workflow scopes</span></div><div class=\"ds-mut\">./.env  dotenv · 3 values · 1 stale</div><div class=\"ds-mut\">● current  ◐ stale  · not in file  ○ not in store   [+] add  [-] remove  [~] update</div></div>",
+      "css": ".ds-term { background: #15171A; color: #D8DADF; font-family: monospace; white-space: pre; padding: 8px 1ch; } .ds-rule { color: #3A3F46; } .ds-acc { color: #F0C674; } .ds-ok { color: #98C379; } .ds-stale { color: #E5A54B; } .ds-dim { color: #A3A8B0; } .ds-mut { color: #7F858E; }"
+    },
+    {
+      "name": "Hint line and status line",
+      "kind": "nav",
+      "refersTo": "hint-key-dark",
+      "description": "Amber keys with dim labels, whole hints dropped from the end when the line is full, ? help and q quit pinned; below, the persistent status line with its kind glyph.",
+      "html": "<div class=\"ds-term\"><div class=\"ds-rule\">────────────────────────────────────────────────────────</div><div><span class=\"ds-k\">space</span><span class=\"ds-l\"> toggle  </span><span class=\"ds-k\">a</span><span class=\"ds-l\"> apply  </span><span class=\"ds-k\">e</span><span class=\"ds-l\"> edit  </span><span class=\"ds-k\">n</span><span class=\"ds-l\"> new  </span><span class=\"ds-k\">?</span><span class=\"ds-l\"> help  </span><span class=\"ds-k\">q</span><span class=\"ds-l\"> quit  </span></div><div class=\"ds-ok\">✓ wrote ./.env</div><div class=\"ds-warn\">! DATABASE_URL in ./.env: one value per file — dev queued out, prod queued in</div><div class=\"ds-err\">✗ could not write ./.env: EACCES</div><div class=\"ds-mut\">~/.evk/store.yaml · 9 values</div></div>",
+      "css": ".ds-term { background: #15171A; color: #D8DADF; font-family: monospace; white-space: pre; padding: 8px 1ch; } .ds-rule { color: #3A3F46; } .ds-k { color: #F0C674; } .ds-l { color: #A3A8B0; } .ds-ok { color: #98C379; } .ds-warn { color: #E5A54B; } .ds-err { color: #EF7B72; } .ds-mut { color: #7F858E; }"
+    },
+    {
+      "name": "Entry form",
+      "kind": "input",
+      "refersTo": "entry-form",
+      "description": "Seven lines: title, four always-visible fields with 14-column labels, focused label in bold amber with a live input, value masked unless focused, footer hint or error.",
+      "html": "<div class=\"ds-term\"><b>Edit OPENAI_API_KEY [dev]</b>\n<span class=\"ds-lab\">  key         </span>OPENAI_API_KEY\n<b class=\"ds-acc\">› value       </b><span class=\"ds-input\">sk-proj-abc123def456</span>\n<span class=\"ds-lab\">  tags        </span>dev\n<span class=\"ds-lab\">  description </span><span class=\"ds-mut\">optional</span>\n<span class=\"ds-mut\">the value shows in clear only while this field has focus</span></div>",
+      "css": ".ds-term { background: #15171A; color: #D8DADF; font-family: monospace; white-space: pre; padding: 8px 1ch; } .ds-acc { color: #F0C674; } .ds-lab { color: #A3A8B0; } .ds-mut { color: #7F858E; }"
+    },
+    {
+      "name": "Diff preview",
+      "kind": "custom",
+      "description": "Combined, masked diff shown after a; Enter writes every file, Esc returns to the board with the queue kept.",
+      "html": "<div class=\"ds-term\"><b>Write 1 file</b><span class=\"ds-dim\">   only evk’s managed block changes; the rest of each file stays as it is</span>\n\n<b>./.env</b><span class=\"ds-dim\">   +1  ~1</span>\n<span class=\"ds-ok\">  + GITHUB_TOKEN=ghp_••••••••Uk2Q</span>\n<span class=\"ds-bad\">  - DATABASE_URL=postgres://app:••••••@db.internal:5432/app</span>\n<span class=\"ds-ok\">  + DATABASE_URL=postgres://app:••••••@db.prod:5432/app</span>\n<span class=\"ds-stale\">  # API_URL=https://example.test</span><span class=\"ds-mut\">   same key outside the block → commented out, restored by clean</span></div>",
+      "css": ".ds-term { background: #15171A; color: #D8DADF; font-family: monospace; white-space: pre; padding: 8px 1ch; } .ds-dim { color: #A3A8B0; } .ds-ok { color: #98C379; } .ds-bad { color: #EF7B72; } .ds-stale { color: #E5A54B; } .ds-mut { color: #7F858E; }"
+    },
+    {
+      "name": "Board row (light scheme)",
+      "kind": "custom",
+      "refersTo": "cell-cursor-light",
+      "description": "Same row in the light palette: selection #E8E2D4, cursor inverse on #8A5A00.",
+      "html": "<div class=\"ds-term-l\"><div class=\"ds-row\"><span>  </span><span>DATABASE_URL        </span><span class=\"ds-dev\">dev  </span><span class=\"ds-mut\">     ·      </span><span>    <b class=\"ds-bad\">[-]</b>     </span></div><div class=\"ds-row ds-sel\"><span class=\"ds-acc\">› </span><b class=\"ds-acc\">DATABASE_URL        </b><span class=\"ds-prod\">prod </span><span class=\"ds-mut\">     ·      </span><span>    <b class=\"ds-cur\">[+]</b>     </span></div></div>",
+      "css": ".ds-term-l { background: #F8F6F1; color: #1E1F22; font-family: monospace; white-space: pre; padding: 8px 1ch; } .ds-row { display: block; } .ds-sel { background: #E8E2D4; } .ds-acc { color: #8A5A00; } .ds-dev { color: #1F5F99; } .ds-prod { color: #A3461C; } .ds-mut { color: #6B7179; } .ds-bad { color: #B3261E; } .ds-cur { background: #8A5A00; color: #F8F6F1; font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Hotel Key Board",
+    "overview": "evk's TUI is one board, like the key rack behind a hotel desk: values are rows, target files are columns, and each cell tells you at a glance whether that key hangs on that hook. Nothing is moved by looking. You queue changes cell by cell, read one combined, masked diff, and only `a` then Enter writes. The board stays put; modes (filter, form, diff, help, import, confirm, add file) swap the body or the info panel, never stack screens.\n\nThe world is terminal-native and restrained. evk draws on the user's own terminal background and prints main text in the terminal's own foreground (the `text` colour is deliberately `undefined`), so it sits inside whatever theme the developer already uses. One amber accent marks the cursor and the keys you can press. State colours (green, amber, red) appear only where they mean something, and every state also has a glyph. Structure comes from horizontal rules and from bold and dim, not from boxes.\n\nThere are no fonts, CSS, radii or shadows here: the platform is a character grid, and the terminal owns the typeface, size and background. The tokens are hex colours for two schemes, a glyph vocabulary, column/line geometry, an interaction grammar and a copy voice.",
+    "keyCharacteristics": [
+      "One board: values (rows) × target files (columns), with no menu hub.",
+      "Queue, then apply: cells only queue; `a` previews one combined diff; Enter writes.",
+      "Terminal foreground for main text; one amber accent; state colour always paired with a glyph.",
+      "Rules (`─`), never nested boxes; hierarchy by bold, dim and muted.",
+      "Secrets masked by default, revealed for 5 s on request.",
+      "Lowercase, consequence-first copy in a persistent status line."
+    ],
+    "rules": [
+      { "name": "The Your-Terminal Rule", "body": "Main text is the terminal's own foreground and the background is never painted, except the selected row and the cursor cell. Do not assign a hex to body text.", "section": "colors" },
+      { "name": "The One Amber Rule", "body": "Desk Amber marks only where the cursor is and what you can press. Status and meaning use the state colours, never the accent.", "section": "colors" },
+      { "name": "The Glyph-First Rule", "body": "Every state carries a glyph (`●` `◐` `·` `○` `[+]` `[-]` `[~]` `✓` `!` `✗`) so it reads without colour; colour only reinforces it.", "section": "colors" },
+      { "name": "The Bold-and-Dim Rule", "body": "Hierarchy is made with weight and the three neutral levels only; never with boxes, underlines or extra colour.", "section": "typography" },
+      { "name": "The Board-Stays Rule", "body": "Modes swap the body or the info panel in place; the header, the two rules, the hint line and the status line never move.", "section": "layout" },
+      { "name": "The Fixed-Cell Rule", "body": "Every cell is 12 columns with a 3-column glyph, so the grid stays aligned whatever the state. Truncate text with `…`; never let it push a column.", "section": "layout" }
+    ],
+    "dos": [
+      "**Do** leave main text on the terminal foreground and the background unpainted, except the selected row (`sel-bg`) and the cursor cell (Desk Amber).",
+      "**Do** pair every state colour with its glyph: `●` `◐` `·` `○` `[+]` `[-]` `[~]` in cells, `✓` `!` `✗` `·` in the status line.",
+      "**Do** keep cells 12 columns with a 3-column centred glyph, and truncate with `…` (keep the start of keys and values, the end of paths).",
+      "**Do** route every file write through the queue and the combined, masked diff; state the consequence in the status line afterwards.",
+      "**Do** define every new colour in both the dark and light palettes.",
+      "**Do** separate regions with full-width `─` rules and order meaning with bold, Dim and Muted."
+    ],
+    "donts": [
+      "**Don't** use Desk Amber for status or meaning; it belongs to the cursor and the keys you can press.",
+      "**Don't** draw boxes, borders or nested panels; the board uses rules only.",
+      "**Don't** show a secret value in clear outside a 5-second reveal or a focused value field.",
+      "**Don't** write to a file directly from a keypress on the board; cells only queue.",
+      "**Don't** add a menu screen or a separate sync wizard; new work is a mode of the one board.",
+      "**Don't** let a hint wrap; drop whole hints from the end and keep `? help` and `q quit`."
+    ]
+  }
+}

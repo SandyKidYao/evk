@@ -1,6 +1,8 @@
 import path from 'path';
 import os from 'os';
 import { cleanFile, hasManagedBlock } from '../core/sync.js';
+import { recordClean } from '../core/board.js';
+import { storeExists } from '../core/store.js';
 import { expandPath } from '../utils/file.js';
 import * as logger from '../utils/logger.js';
 
@@ -47,6 +49,9 @@ export function cleanCommand(options) {
 
     for (const target of targets) {
       const result = cleanFile(target);
+      if (storeExists()) {
+        try { recordClean(target); } catch { /* bookkeeping only */ }
+      }
 
       if (result.cleaned || result.restored.length > 0) {
         logger.success(`Cleaned ${target}`);

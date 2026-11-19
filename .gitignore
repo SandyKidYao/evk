@@ -140,3 +140,7 @@ vite.config.ts.timestamp-*
 
 # Mac OS
 .DS_Store
+
+# Impeccable local artifacts (review captures, design demos)
+.impeccable/review/
+.impeccable/mocks/

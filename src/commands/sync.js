@@ -2,6 +2,7 @@ import path from 'path';
 import os from 'os';
 import { getAllVariables, getVariablesByKeys, ensureStore, flattenVariables } from '../core/store.js';
 import { syncToFile } from '../core/sync.js';
+import { recordSync } from '../core/board.js';
 import { expandPath } from '../utils/file.js';
 import * as logger from '../utils/logger.js';
 
@@ -64,6 +65,13 @@ export function syncCommand(keys, options) {
 
     // Perform sync
     const result = syncToFile(targetPath, flattened);
+
+    // Remember which values this file now holds (shown in the TUI board)
+    try {
+      recordSync(targetPath, Object.values(flattened).map(v => v.id));
+    } catch {
+      // Bookkeeping only; the file itself is already written
+    }
 
     logger.success(`Synced to ${result.path}`);
     logger.dim(`  ${result.total} variable(s): ${result.added} added, ${result.updated} updated, ${result.deprecated} deprecated`);

@@ -40,19 +40,22 @@ evk/
 │   │   └── purge.js     # Delete all evk data
 │   ├── core/
 │   │   ├── store.js     # YAML store operations
-│   │   ├── sync.js      # Sync logic with conflict detection
+│   │   ├── sync.js      # Sync logic with conflict detection (syncToFile merges, writeBlock replaces)
+│   │   ├── board.js     # Board model: values × target files, cell states, plans, target records
 │   │   └── import.js    # Import logic (parse file, detect conflicts)
 │   ├── tui/
 │   │   ├── index.js     # TUI entry point (startTUI)
-│   │   ├── App.js       # Main app with view state management
-│   │   ├── theme.js     # Colors and icons
-│   │   ├── layout.js    # Responsive layout helpers (table column widths, truncation)
+│   │   ├── App.js       # The board: state, input handling, grid + info panel rendering
+│   │   ├── theme.js     # Palette, tag colours, cell glyphs
+│   │   ├── layout.js    # Width-aware fit/center/scroll helpers
 │   │   ├── hooks/       # useTerminalSize (re-render on terminal resize)
-│   │   ├── components/  # Shared components (Banner, InputField)
-│   │   └── views/       # View components
+│   │   ├── components/  # Banner (empty store only), EntryForm, DiffPreview
+│   │   └── views/       # HelpView, ImportPanel
 │   └── utils/
 │       ├── file.js      # Safe file I/O with ~ expansion
 │       ├── parser.js    # Block parsing/generation
+│       ├── mask.js      # Secret masking for display
+│       ├── clipboard.js # Copy without printing (pbcopy/clip/wl-copy/xclip, OSC 52 fallback)
 │       └── logger.js    # Colored console output helpers
 └── tests/               # Jest test files
 ```
@@ -70,18 +73,25 @@ evk/
 
 ### TUI (Terminal UI)
 
-Built with React + Ink. Located in `src/tui/`:
+Built with React + Ink. Located in `src/tui/`. There is no menu: `evk` opens straight into **the board** (rows = store entries, columns = target files).
 
-- **index.js** - Entry point, exports `startTUI()` function
-- **App.js** - Main app with view state management (MENU, LIST, ADD, SYNC, IMPORT, DETAIL, CLEAN)
-- **views/** - Individual view components (MainMenu, ListView, AddView, SyncView, ImportView, DetailView, CleanView)
-- **hooks/useTerminalSize.js** - Tracks terminal `columns`/`rows` and re-renders on resize
-- **layout.js** - `getTableLayout(columns)` computes KEY/VALUE/TAGS column widths; `truncate()` for ellipsis truncation
-- **components/InputField.js** - Shared step-form input row (AddView, DetailView edit mode); input box width follows terminal width
+- **App.js** - Holds the board (`loadBoard()`), cursor, the pending queue (`{ "<targetPath>\t<rowId>": 'add'|'remove'|'update' }`) and a `mode` (board, search, form, diff, help, addtarget, confirm, import). Toggling a cell only queues; `a` builds plans with `planTarget()` and shows `DiffPreview`; Enter runs `applyPlan()` per file
+- **components/EntryForm.js** - One form for add and edit (key, value, tags, description); Tab moves, Enter saves
+- **components/DiffPreview.js** - Masked, scrollable preview of every file a write will touch
+- **views/ImportPanel.js** - Checklist import of variables found *outside* a file's managed block
+- **views/HelpView.js** - Key and glyph reference (`?`)
+- **theme.js** - Main text uses the terminal foreground; amber accent only for cursor and actionable keys; state colours (ok / stale / bad) always paired with a glyph
+- **layout.js** - `fit`, `fitLeft`, `center`, `strWidth`, `scrollWindow` for the fixed character grid
 
-Uses `React.createElement` directly (aliased as `h`) rather than JSX.
+Uses `React.createElement` directly (aliased as `h`) rather than JSX. Grid geometry (key/tag widths, visible columns, grid height) is derived from `useTerminalSize`; columns scroll horizontally when they do not fit.
 
-Layouts are responsive: table column widths (ListView, SyncView, ImportView preview) and text input widths are derived from the current terminal width via `useTerminalSize`, not hardcoded.
+### Board model (`src/core/board.js`)
+
+- `store.targets[<path>].entries` records which entry ids a file holds. Paths are canonical: `~/…` under home, absolute elsewhere (`canonicalPath`); `displayPath` shows `./.env` for the current directory
+- Cell state compares that record with the file's actual managed block: assigned + same value = `ok`, assigned + different/missing = `stale`, unassigned = `none`; block keys not owned by any entry are `untracked` rows
+- Files without a record (written by older versions) are inferred by key + value (`inferAssigned`)
+- `planTarget` changes only queued cells; everything else in the block is kept as written. One value per key per file
+- CLI `sync` calls `recordSync`, CLI `clean` calls `recordClean`, so the CLI and the board share one model
 
 ### Data Structure (v2)
 
@@ -104,6 +114,11 @@ vars:
     description: ""
     created_at: "2024-01-01T00:00:00.000Z"
     updated_at: "2024-01-01T00:00:00.000Z"
+targets:                      # which entries each file holds (board + CLI sync/clean)
+  "~/.zshrc":
+    entries: ["uuid-1"]
+  "~/projects/api/.env":
+    entries: []
 ```
 
 Key design decisions:

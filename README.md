@@ -93,15 +93,30 @@ evk      # Default: starts TUI mode
 evk ui   # Explicit TUI command
 ```
 
-The TUI provides:
+The TUI is a single **board**: your values are the rows, the files you sync to are the columns.
 
-- List view with variable details
-- Add new variables
-- Edit existing variables
-- Import variables from files
-- Sync to custom paths
-- Clean files with restore preview
-- Responsive layout that adapts to terminal width and resizing
+```text
+ evk · board   9 values · 2 files                                  / filter
+ ──────────────────────────────────────────────────────────────────────────
+                           ~/.zshrc     ./.env       t + file
+   ANTHROPIC_API_KEY dev       ●           ·
+   DATABASE_URL      dev       ·          [-]
+ › DATABASE_URL      prod      ·          [+]
+   OPENAI_API_KEY    dev       ·           ◐
+ ──────────────────────────────────────────────────────────────────────────
+ queued  ./.env +1 -1  → a to preview & write
+ DATABASE_URL prod  postgres://app:••••••@db.internal:5432/app
+```
+
+- `●` written & current, `◐` the store changed since it was written, `·` not in that file, `○` in the file's evk block but not in the store
+- `space` on a cell queues a change (`[+]` add, `[-]` remove, `[~]` update). Nothing touches a file until `a` shows the combined diff and you confirm it
+- One value per key per file: queuing `prod` into a file that holds `dev` queues `dev` out automatically
+- `u` queues every stale cell, `c` clears a whole file (its commented-out lines come back), `x` drops the queue
+- `e`/`n` edit or add in one form (Tab between fields, Enter saves); `d` deletes
+- Values are masked; `v` shows one for 5 seconds, `y` copies it without showing it
+- `/` filters, `i` imports from a file, `t` adds another file as a column, `?` lists every key
+
+Columns are `~/.zshrc` / `~/.bashrc` plus `./.env` of the directory you start evk in, and any file you add. evk remembers which value each file holds in `~/.evk/store.yaml` (`targets`); `evk sync` and `evk clean` keep that record up to date too.
 
 ## Managed Blocks
 

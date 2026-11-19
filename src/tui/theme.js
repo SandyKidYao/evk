@@ -1,3 +1,9 @@
+// Terminal palette for the board.
+// Main text uses the terminal's own foreground (color: undefined) so evk
+// sits inside the user's theme. The accent is reserved for the cursor and
+// the keys you can press; state colours appear only where they mean
+// something, and every state also has a glyph.
+
 // Detect terminal color scheme from environment
 function detectColorScheme() {
   // User override via env var: EVK_COLOR_SCHEME=light or EVK_COLOR_SCHEME=dark
@@ -18,114 +24,67 @@ function detectColorScheme() {
 }
 
 const darkColors = {
-  // Primary blues (gradient)
-  primary: '#1E90FF',      // Dodger Blue
-  primaryLight: '#87CEEB', // Sky Blue
-  primaryDark: '#4169E1',  // Royal Blue
-
-  // Accent colors
-  accent: '#00BFFF',       // Deep Sky Blue
-  success: '#32CD32',      // Lime Green
-  error: '#FF6B6B',        // Soft Red
-  warning: '#FFD93D',      // Yellow
-
-  // Neutral colors
-  text: '#E0E0E0',         // Light gray text
-  textDim: '#C0CEDB',      // Secondary text — readable even on semi-transparent dark terminals
-  textMuted: '#96AAB8',    // Muted/tertiary text — still visible on semi-transparent backgrounds
-  border: '#7A8FA0',       // Border — high enough contrast to be seen on dark bg
-  borderLight: '#9AAAB8',  // Lighter border
-
-  // Banner gradient (top to bottom: bright → pale blue)
-  bannerGradient: ['#00BFFF', '#1E90FF', '#4169E1', '#6495ED', '#87CEEB', '#B0E0E6'],
-  bannerTagline: '#B0C4DE',
-  bannerVersion: '#96AAB8',
-
-  // Tag colors (for badges)
-  tags: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'],
+  text: undefined,          // terminal foreground
+  dim: '#A3A8B0',           // secondary text
+  muted: '#7F858E',         // hints, legend, empty cells
+  rule: '#3A3F46',          // horizontal rules
+  accent: '#F0C674',        // cursor + actionable keys only
+  accentFg: '#15171A',      // text on the accent (cursor cell)
+  selBg: '#262A31',         // selected row
+  ok: '#98C379',            // written & current
+  stale: '#E5A54B',         // store changed since write / pending update
+  bad: '#EF7B72',           // removal, errors
+  tags: { dev: '#86B6E0', staging: '#BFA6E6', prod: '#E0A487' },
+  tagCycle: ['#A9C2A0', '#D7B98A', '#9FC3C9', '#C9A9C2']
 };
 
 const lightColors = {
-  // Primary blues — darker to be readable on light backgrounds
-  primary: '#1565C0',      // Material Blue 800
-  primaryLight: '#1976D2', // Material Blue 700
-  primaryDark: '#0D47A1',  // Material Blue 900
-
-  // Accent colors
-  accent: '#0277BD',       // Dark Cyan Blue
-  success: '#2E7D32',      // Dark Green
-  error: '#C62828',        // Dark Red
-  warning: '#E65100',      // Dark Orange (yellow is invisible on light bg)
-
-  // Neutral colors
-  text: '#1A1A2E',         // Very dark navy
-  textDim: '#546E7A',      // Blue Gray
-  textMuted: '#78909C',    // Lighter Blue Gray
-  border: '#90A4AE',       // Light Blue Gray
-  borderLight: '#B0BEC5',  // Pale Blue Gray
-
-  // Banner gradient (top to bottom: dark → lighter blue)
-  bannerGradient: ['#0D47A1', '#1565C0', '#1976D2', '#1E88E5', '#2196F3', '#42A5F5'],
-  bannerTagline: '#37474F',
-  bannerVersion: '#546E7A',
-
-  // Tag colors — saturated but dark enough for light backgrounds
-  tags: ['#C62828', '#00695C', '#1565C0', '#558B2F', '#E65100', '#7B1FA2', '#00838F', '#F57F17'],
+  text: undefined,
+  dim: '#4F555D',
+  muted: '#6B7179',
+  rule: '#C9C3B6',
+  accent: '#8A5A00',
+  accentFg: '#F8F6F1',
+  selBg: '#E8E2D4',
+  ok: '#2D7A31',
+  stale: '#B4470F',
+  bad: '#B3261E',
+  tags: { dev: '#1F5F99', staging: '#6A3FB0', prod: '#A3461C' },
+  tagCycle: ['#3F6B34', '#7A5A12', '#1F6B73', '#7A3F6B']
 };
 
 export const colorScheme = detectColorScheme();
 export const colors = colorScheme === 'light' ? lightColors : darkColors;
 
-// Icons for menu items and status
-export const icons = {
-  // Menu
-  list: '≡',
-  add: '+',
-  sync: '↻',
-  import: '↓',
-  clean: '×',
-  exit: '←',
+const TAG_ALIASES = { development: 'dev', production: 'prod', stage: 'staging' };
 
-  // Status
-  success: '✓',
-  error: '✗',
-  warning: '!',
-  info: 'i',
-
-  // Detail
-  key: '#',
-  value: '=',
-  tags: '@',
-  time: '~',
-  description: '-',
-
-  // Actions
-  edit: '~',
-  delete: '×',
-  back: '←',
-  save: '↓',
-
-  // Misc
-  lock: '»',
-  bullet: '•',
-  arrow: '›',
-  check: '●',
-  uncheck: '○',
-};
-
-// Get a consistent color for a tag based on its name
+// Consistent colour for a tag: known environments get fixed hues,
+// anything else hashes into a small muted cycle.
 export function getTagColor(tag) {
+  const known = colors.tags[TAG_ALIASES[tag] || tag];
+  if (known) return known;
   let hash = 0;
-  for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors.tags[Math.abs(hash) % colors.tags.length];
+  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  return colors.tagCycle[Math.abs(hash) % colors.tagCycle.length];
 }
 
-// Border styles
-export const borders = {
-  normal: 'single',
-  rounded: 'round',
-  bold: 'bold',
-  double: 'double',
+// Cell glyphs: always 3 columns wide so the grid stays aligned
+export const cells = {
+  ok: ' ● ',
+  stale: ' ◐ ',
+  none: ' · ',
+  untracked: ' ○ ',
+  add: '[+]',
+  remove: '[-]',
+  update: '[~]'
+};
+
+export const glyphs = {
+  pointer: '›',
+  rule: '─',
+  ok: '✓',
+  warn: '!',
+  err: '✗',
+  info: '·',
+  more: '…'
 };

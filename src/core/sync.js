@@ -143,6 +143,40 @@ export function syncToFile(targetPath, vars) {
 }
 
 /**
+ * Replace the managed block so it holds exactly `vars`.
+ * Unlike syncToFile this does not merge with the old block: keys missing
+ * from `vars` leave the file. Conflicting lines outside the block are
+ * commented out, as in syncToFile.
+ * @param {string} targetPath - Path to target file
+ * @param {object} vars - { KEY: value } in the order they should appear
+ * @returns {{path: string, type: string, commented: string[]}}
+ */
+export function writeBlock(targetPath, vars) {
+  const expanded = expandPath(targetPath);
+  const type = detectTargetType(expanded);
+
+  let content = readFileSafe(targetPath) || '';
+  const { content: cleanedContent, commented } = commentOutConflicts(content, Object.keys(vars), type);
+  content = cleanedContent;
+
+  const block = extractManagedBlock(content);
+  const newBlock = generateBlock(vars, {}, type);
+  let newContent;
+
+  if (block) {
+    newContent = content.slice(0, block.start) + newBlock + content.slice(block.end);
+  } else {
+    if (content && !content.endsWith('\n')) {
+      content += '\n';
+    }
+    newContent = content + '\n' + newBlock + '\n';
+  }
+
+  writeFileSafe(targetPath, newContent);
+  return { path: expanded, type, commented };
+}
+
+/**
  * Restore variables that were commented out by evk
  * @param {string} content - File content
  * @returns {{content: string, restored: string[]}} Updated content and list of restored keys
