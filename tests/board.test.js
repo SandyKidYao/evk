@@ -192,7 +192,7 @@ describe('records', () => {
 
   test('canonicalPath stores home paths with ~ and others as absolute', () => {
     expect(board.canonicalPath('.env', PROJ)).toBe('~/proj/.env');
-    expect(board.canonicalPath('/etc/app.env', PROJ)).toBe('/etc/app.env');
+    expect(board.canonicalPath('/etc/app.env', PROJ)).toBe(path.resolve('/etc/app.env'));
     expect(board.displayPath('~/proj/.env', PROJ)).toBe('./.env');
   });
 });

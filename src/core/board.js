@@ -27,7 +27,8 @@ export function canonicalPath(p, cwd = process.cwd()) {
   const abs = p.startsWith('~') ? expandPath(p) : path.resolve(cwd, p);
   const home = os.homedir();
   if (abs === home || abs.startsWith(home + path.sep)) {
-    return '~' + abs.slice(home.length);
+    // Forward slashes under ~ so the record reads the same on every OS
+    return '~' + abs.slice(home.length).split(path.sep).join('/');
   }
   return abs;
 }
